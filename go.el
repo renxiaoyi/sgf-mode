@@ -38,7 +38,7 @@
        (cons (file-name-directory (or load-file-name (buffer-file-name)))
              load-path)))
   (require 'go-util         "go-util.el")
-  (require 'go-api          "go-api.el")
+  ;(require 'go-api          "go-api.el")
   (require 'go-board        "go-board.el")
   (require 'go-board-faces  "go-board-faces.el")
   (require 'sgf             "sgf.el")

@@ -22,7 +22,8 @@
 
 ;;; Code:
 (require 'go-util)
-(require 'go-api)
+;(require 'go-api)
+(require 'eieio)
 (require 'go-board-faces)
 
 (defvar *history*  nil "Holds the board history for a GO buffer.")
@@ -293,7 +294,7 @@
                (pieces-to-board (car *history*) *size*)) "\n\n"
               (player-to-string :W) "\n"
               (player-to-string :B) "\n")
-      (let ((comment (ignoring-unsupported (go-comment *back-end*))))
+      (let ((comment (go-comment *back-end*)))
         (when comment
           (insert (make-string (+ 6 (* 2 *size*)) ?=)
                   "\n\n"
@@ -361,15 +362,13 @@
 ;;; User input
 (defmacro with-trackers (sym &rest body)
   (declare (indent 1))
-  `(ignoring-unsupported
-    (mapcar (lambda (tr) (let ((,sym tr)) ,@body)) *trackers*)))
+  (mapcar (lambda (tr) (let ((,sym tr)) ,@body)) *trackers*))
 
 (defmacro with-backends (sym &rest body)
   (declare (indent 1))
   `(save-window-excursion
-     (ignoring-unsupported
-      (prog1 (let ((,sym *back-end*)) ,@body)
-        (with-trackers ,sym ,@body)))))
+     (prog1 (let ((,sym *back-end*)) ,@body)
+       (with-trackers ,sym ,@body))))
 (def-edebug-spec with-backends (sexp body))
 
 (defvar go-board-actions '(move resign undo comment)
@@ -469,7 +468,7 @@
           (message "pass")
         (setf *turn* (other-color *turn*))
         (apply-turn-to-board
-         (cons move (ignoring-unsupported (go-labels *back-end*)))))
+         (cons move (go-labels *back-end*))))
       (with-trackers tr (setf (go-move tr) move))
       (if (equal move :pass)
           (goto-char (point-min))
