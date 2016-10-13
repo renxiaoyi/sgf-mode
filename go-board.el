@@ -21,9 +21,8 @@
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
-(require 'go-util)
-;(require 'go-api)
 (require 'eieio)
+(require 'go-util)
 (require 'go-board-faces)
 
 (defvar *history*  nil "Holds the board history for a GO buffer.")
@@ -32,8 +31,6 @@
 (defvar *black*    nil "Plist of info on black player.")
 (defvar *white*    nil "Plist of info on white player.")
 (defvar *back-end* nil "Holds the primary back-end connected to a board.")
-(defvar *trackers* nil "Holds a list of back-ends which should track the game.")
-(defvar *autoplay* nil "Should `*back-end*' automatically respond to moves.")
 (defvar *sgf-file* nil "Path to the current sgf file.")
 
 (defvar black-piece "X")
@@ -309,49 +306,41 @@
 
 ;; TODO: why prev doesn't work?
 
-(defun go-board (back-end &rest trackers)
+(defun go-board (back-end)
   (let ((buffer (generate-new-buffer "*GO*")))
     (with-current-buffer buffer
       (go-board-mode)
       (let ((name (go-name back-end)))
         (when name
-          (rename-buffer (ear-muffs name) 'unique)
-          (mapcar (lambda (tr) (setf (go-name tr) name)) trackers)))
+          (rename-buffer (ear-muffs name) 'unique)))
       (set (make-local-variable '*back-end*) back-end)
       (set (make-local-variable '*turn*) :B)
       (set (make-local-variable '*black*) '(:name "black" :prisoners 0))
       (set (make-local-variable '*white*) '(:name "white" :prisoners 0))
       (set (make-local-variable '*size*) (go-size back-end))
-      (set (make-local-variable '*autoplay*) nil)
       (set (make-local-variable '*go-board-overlays*) nil)
-      (mapcar (lambda (tr) (setf (go-size tr) *size*)) trackers)
       (set (make-local-variable '*history*)
-           (list (board-to-pieces (make-board *size*))))
-      (set (make-local-variable '*trackers*) trackers))
+           (list (board-to-pieces (make-board *size*)))))
     (pop-to-buffer buffer)
     (plist-put *black* :prisoners 0)
     (plist-put *white* :prisoners 0)
     (setq truncate-lines t)
     (update-display buffer)))
 
-(defun go-board-in-buffer (back-end buffer &rest trackers)
+(defun go-board-in-buffer (back-end buffer)
   (with-current-buffer buffer
     (go-board-mode)
     (let ((name (go-name back-end)))
       (when name
-        (rename-buffer (ear-muffs name) 'unique)
-        (mapcar (lambda (tr) (setf (go-name tr) name)) trackers)))
+        (rename-buffer (ear-muffs name) 'unique)))
     (set (make-local-variable '*back-end*) back-end)
     (set (make-local-variable '*turn*) :B)
     (set (make-local-variable '*black*) '(:name "black" :prisoners 0))
     (set (make-local-variable '*white*) '(:name "white" :prisoners 0))
     (set (make-local-variable '*size*) (go-size back-end))
-    (set (make-local-variable '*autoplay*) nil)
     (set (make-local-variable '*go-board-overlays*) nil)
-    (mapcar (lambda (tr) (setf (go-size tr) *size*)) trackers)
     (set (make-local-variable '*history*)
-         (list (board-to-pieces (make-board *size*))))
-    (set (make-local-variable '*trackers*) trackers))
+         (list (board-to-pieces (make-board *size*)))))
   (pop-to-buffer buffer)
   (plist-put *black* :prisoners 0)
   (plist-put *white* :prisoners 0)
@@ -360,15 +349,10 @@
 
 
 ;;; User input
-(defmacro with-trackers (sym &rest body)
-  (declare (indent 1))
-  (mapcar (lambda (tr) (let ((,sym tr)) ,@body)) *trackers*))
-
 (defmacro with-backends (sym &rest body)
   (declare (indent 1))
   `(save-window-excursion
-     (prog1 (let ((,sym *back-end*)) ,@body)
-       (with-trackers ,sym ,@body))))
+     (prog1 (let ((,sym *back-end*)) ,@body))))
 (def-edebug-spec with-backends (sexp body))
 
 (defvar go-board-actions '(move resign undo comment)
@@ -405,8 +389,7 @@
     (with-backends back
       (setf (go-move back) move))
     (setf *turn* (other-color *turn*))
-    (apply-turn-to-board (list move)))
-  (when *autoplay* (go-board-next)))
+    (apply-turn-to-board (list move))))
 
 (defun go-board-refresh ()
   (interactive)
@@ -424,25 +407,24 @@
   (with-backends back (go-pass back))
   (save-window-excursion
     (setf *turn* (other-color *turn*))
-    (when *autoplay*
-      (when (equalp :pass (go-board-next))
-        ;; mark open points
-        (mapc (lambda (move)
-                (go-board-mark-point (point-of-pos (cddr move))
-                                     (go-board-cross (ecase (car move)
-                                                       (:B 'black)
-                                                       (:W 'white)))))
-              (with-backends back (go-territory back)))
-        ;; mark dead stones
-        (mapc (lambda (move)
-                (let* ((point (point-of-pos (cddr move)))
-                       (color (car (get-text-property point :type))))
-                  (go-board-mark-point point
-                                       (go-board-cross (ecase color
-                                                         (:black 'white)
-                                                         (:white 'black))))))
-              (with-backends back (go-dead back)))
-        (message "final score: %s" (with-backends back (go-score back)))))))
+    (when (equalp :pass (go-board-next))
+      ;; mark open points
+      (mapc (lambda (move)
+              (go-board-mark-point (point-of-pos (cddr move))
+                                   (go-board-cross (ecase (car move)
+                                                     (:B 'black)
+                                                     (:W 'white)))))
+            (with-backends back (go-territory back)))
+      ;; mark dead stones
+      (mapc (lambda (move)
+              (let* ((point (point-of-pos (cddr move)))
+                     (color (car (get-text-property point :type))))
+                (go-board-mark-point point
+                                     (go-board-cross (ecase color
+                                                       (:black 'white)
+                                                       (:white 'black))))))
+            (with-backends back (go-dead back)))
+      (message "final score: %s" (with-backends back (go-score back))))))
 
 (defun go-board-undo (&optional num)
   (interactive "p")
@@ -469,7 +451,6 @@
         (setf *turn* (other-color *turn*))
         (apply-turn-to-board
          (cons move (go-labels *back-end*))))
-      (with-trackers tr (setf (go-move tr) move))
       (if (equal move :pass)
           (goto-char (point-min))
         (goto-char (point-of-pos (cddr move)))))))
@@ -538,8 +519,7 @@
   (with-board board
     (setf *turn* (other-color *turn*))
     (apply-turn-to-board (list move))
-    (goto-char (point-of-pos (cddr move)))
-    (with-trackers tr (setf (go-move tr) move))))
+    (goto-char (point-of-pos (cddr move)))))
 
 (defmethod go-labels ((board board))
   (signal 'unsupported-back-end-command (list board :labels)))

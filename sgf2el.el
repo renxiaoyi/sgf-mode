@@ -87,17 +87,6 @@
       (when last-node (insert ")")))
     (message "parsing DONE")))
 
-(defun sgf2el-normalize (&optional buffer)
-  "Cleanup the formatting of the elisp sgf data in BUFFER."
-  (interactive)
-  (let ((buffer (or buffer (current-buffer))) temp)
-    (sgf2el-set-to-var temp buffer)
-    (with-current-buffer buffer
-      (save-excursion
-        (delete-region (point-min) (point-max))
-        (insert (pp temp))))
-    temp))
-
 (defun sgf2el (&optional sgf-buffer)
   "Convert the content of SGF-BUFFER to emacs-lisp in a new buffer."
   (interactive)

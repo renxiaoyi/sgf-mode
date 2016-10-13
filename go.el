@@ -66,9 +66,7 @@
     (with-current-buffer (apply #'go-board
                                 (cons back-end
                                       (unless (equal (class-of back-end) 'sgf)
-                                        (list (make-instance 'sgf)))))
-      (unless (equal (class-of back-end) 'sgf)
-        (setq *autoplay* t)))))
+                                        (list (make-instance 'sgf))))))))
 
 ;;;###autoload
 (defun go-view-sgf (&optional file)
