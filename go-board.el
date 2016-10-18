@@ -40,12 +40,6 @@
 (defvar *go-board-overlays* nil
   "List of overlays carrying GO board painting information.")
 
-(defvar go-board-use-move-sound nil)
-(defvar go-board-move-sound
-  `(sound :file ,(expand-file-name "stone.wav"
-                                   (file-name-directory
-                                    (or load-file-name (buffer-file-name))))))
-
 ;;; Board manipulation functions
 (defun make-board (size) (make-vector (* size size) nil))
 
@@ -78,7 +72,6 @@
 (defun apply-turn-to-board (moves)
   (let ((board (pieces-to-board (car *history*) *size*)))
     (clear-labels board)
-    (when go-board-use-move-sound (play-sound go-board-move-sound))
     (dolist (move moves) (apply-move board move))
     (push (board-to-pieces board) *history*)
     (update-display (current-buffer))))
@@ -300,32 +293,9 @@
       (goto-char point)))
   buffer)
 
-;; (defun go-board (back-end &rest trackers)
-;;   (let ((buffer (generate-new-buffer "*GO*")))
-;;     (go-board-in-buffer back-end buffer trackers)))
-
-;; TODO: why prev doesn't work?
-
-(defun go-board (back-end)
+(defun go-board (back-end &rest trackers)
   (let ((buffer (generate-new-buffer "*GO*")))
-    (with-current-buffer buffer
-      (go-board-mode)
-      (let ((name (go-name back-end)))
-        (when name
-          (rename-buffer (ear-muffs name) 'unique)))
-      (set (make-local-variable '*back-end*) back-end)
-      (set (make-local-variable '*turn*) :B)
-      (set (make-local-variable '*black*) '(:name "black" :prisoners 0))
-      (set (make-local-variable '*white*) '(:name "white" :prisoners 0))
-      (set (make-local-variable '*size*) (go-size back-end))
-      (set (make-local-variable '*go-board-overlays*) nil)
-      (set (make-local-variable '*history*)
-           (list (board-to-pieces (make-board *size*)))))
-    (pop-to-buffer buffer)
-    (plist-put *black* :prisoners 0)
-    (plist-put *white* :prisoners 0)
-    (setq truncate-lines t)
-    (update-display buffer)))
+    (go-board-in-buffer back-end buffer)))
 
 (defun go-board-in-buffer (back-end buffer)
   (with-current-buffer buffer
@@ -490,98 +460,6 @@
   "Major mode for viewing a GO board."
   (set (make-local-variable 'kill-buffer-query-functions)
        (add-to-list 'kill-buffer-query-functions 'go-board-safe-quit)))
-
-
-;;; Class and interface
-(defclass board ()
-  ((buffer :initarg :buffer :accessor buffer :initform nil)))
-
-(defmacro with-board (board &rest body)
-  (declare (indent 1))
-  `(with-current-buffer (buffer ,board) ,@body))
-
-(defmethod go-size ((board board))
-  (with-board board *size*))
-
-(defmethod set-go-size ((board board) size)
-  (with-board board (setq *size* size)))
-
-(defmethod go-name ((board board))
-  (un-ear-muffs (buffer-name (buffer board))))
-
-(defmethod set-go-name ((board board) name)
-  (with-board board (rename-buffer name 'unique)))
-
-(defmethod go-move ((board board))
-  (signal 'unsupported-back-end-command (list board :move)))
-
-(defmethod set-go-move ((board board) move)
-  (with-board board
-    (setf *turn* (other-color *turn*))
-    (apply-turn-to-board (list move))
-    (goto-char (point-of-pos (cddr move)))))
-
-(defmethod go-labels ((board board))
-  (signal 'unsupported-back-end-command (list board :labels)))
-
-(defmethod set-go-labels ((board board) labels)
-  (signal 'unsupported-back-end-command (list board :set-labels labels)))
-
-(defmethod go-comment ((board board))
-  (signal 'unsupported-back-end-command (list board :comment)))
-
-(defmethod set-go-comment ((board board) comment)
-  (signal 'unsupported-back-end-command (list board :set-comment comment)))
-
-(defmethod go-alt ((board board))
-  (signal 'unsupported-back-end-command (list board :alt)))
-
-(defmethod set-go-alt ((board board) alt)
-  (signal 'unsupported-back-end-command (list board :set-alt alt)))
-
-(defmethod go-color ((board board))
-  (with-board board *turn*))
-
-(defmethod set-go-color ((board board) color)
-  (with-board board (setq *turn* color)))
-
-(defmethod go-player-name ((board board) color)
-  (with-board board (go-player-get color :name)))
-
-(defmethod set-go-player-name ((board board) color name)
-  (with-board board (go-player-set color :name name)))
-
-(defmethod go-player-time ((board board) color)
-  (with-board board (go-player-get color :time)))
-
-(defmethod set-go-player-time ((board board) color time)
-  (with-board board (go-player-set color :time time)))
-
-(defmethod go-player-prisoners ((board board) color)
-  (with-board board (go-player-get color :prisoners)))
-
-(defmethod set-go-player-prisoners ((board board) color prisoners)
-  (with-board board (go-player-set color :prisoners prisoners)))
-
-;; non setf'able generic functions
-(defmethod go-undo ((board board))
-  (with-board board (go-board-undo)))
-
-(defmethod go-pass ((board board))
-  (with-board board
-    (message "pass")
-    (setf *turn* (other-color *turn*))))
-
-(defmethod go-resign ((board board))
-  (with-board board (message "%s resign" *turn*)))
-
-(defmethod go-reset ((board board))
-  (with-board board
-    (setf *history* nil)
-    (update-display)))
-
-(defmethod go-quit ((board board))
-  (with-board board (go-quit)))
 
 (provide 'go-board)
 ;;; go-board.el ends here
