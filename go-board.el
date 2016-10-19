@@ -21,7 +21,6 @@
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
-(require 'eieio)
 (require 'go-util)
 (require 'go-board-faces)
 
@@ -30,7 +29,7 @@
 (defvar *turn*     nil "Holds the color of the current turn.")
 (defvar *black*    nil "Plist of info on black player.")
 (defvar *white*    nil "Plist of info on white player.")
-(defvar *back-end* nil "Holds the primary back-end connected to a board.")
+(defvar *sgf*      nil "The sgf object representing the board.")
 (defvar *sgf-file* nil "Path to the current sgf file.")
 
 (defvar black-piece "X")
@@ -284,7 +283,7 @@
                (pieces-to-board (car *history*) *size*)) "\n\n"
               (player-to-string :W) "\n"
               (player-to-string :B) "\n")
-      (let ((comment (go-comment *back-end*)))
+      (let ((comment (go-comment *sgf*)))
         (when comment
           (insert (make-string (+ 6 (* 2 *size*)) ?=)
                   "\n\n"
@@ -293,21 +292,21 @@
       (goto-char point)))
   buffer)
 
-(defun go-board (back-end &rest trackers)
+(defun go-board (sgf)
   (let ((buffer (generate-new-buffer "*GO*")))
-    (go-board-in-buffer back-end buffer)))
+    (go-board-in-buffer sgf buffer)))
 
-(defun go-board-in-buffer (back-end buffer)
+(defun go-board-in-buffer (sgf buffer)
   (with-current-buffer buffer
     (go-board-mode)
-    (let ((name (go-name back-end)))
+    (let ((name (go-name sgf)))
       (when name
         (rename-buffer (ear-muffs name) 'unique)))
-    (set (make-local-variable '*back-end*) back-end)
+    (set (make-local-variable '*sgf*) sgf)
     (set (make-local-variable '*turn*) :B)
     (set (make-local-variable '*black*) '(:name "black" :prisoners 0))
     (set (make-local-variable '*white*) '(:name "white" :prisoners 0))
-    (set (make-local-variable '*size*) (go-size back-end))
+    (set (make-local-variable '*size*) (go-size sgf))
     (set (make-local-variable '*go-board-overlays*) nil)
     (set (make-local-variable '*history*)
          (list (board-to-pieces (make-board *size*)))))
@@ -319,12 +318,6 @@
 
 
 ;;; User input
-(defmacro with-backends (sym &rest body)
-  (declare (indent 1))
-  `(save-window-excursion
-     (prog1 (let ((,sym *back-end*)) ,@body))))
-(def-edebug-spec with-backends (sexp body))
-
 (defvar go-board-actions '(move resign undo comment)
   "List of actions which may be taken on an GO board.")
 
@@ -356,8 +349,7 @@
                                   (mapcar #'number-to-string
                                           (range 1 *size*))))))))
          (move (cons *turn* (cons :pos pos))))
-    (with-backends back
-      (setf (go-move back) move))
+    (setf (go-move *sgf*) move)
     (setf *turn* (other-color *turn*))
     (apply-turn-to-board (list move))))
 
@@ -367,14 +359,14 @@
 
 (defun go-board-resign ()
   (interactive)
-  (with-backends back (go-resign back)))
+  (go-resign *sgf*))
 
 (defun go-board-mark-point (point mark)
   (mapc (lambda (ov) (go-board-mark ov mark)) (overlays-at point)))
 
 (defun go-board-pass ()
   (interactive)
-  (with-backends back (go-pass back))
+  (go-pass *sgf*)
   (save-window-excursion
     (setf *turn* (other-color *turn*))
     (when (equalp :pass (go-board-next))
@@ -384,7 +376,7 @@
                                    (go-board-cross (ecase (car move)
                                                      (:B 'black)
                                                      (:W 'white)))))
-            (with-backends back (go-territory back)))
+            (go-territory *sgf*))
       ;; mark dead stones
       (mapc (lambda (move)
               (let* ((point (point-of-pos (cddr move)))
@@ -393,34 +385,34 @@
                                      (go-board-cross (ecase color
                                                        (:black 'white)
                                                        (:white 'black))))))
-            (with-backends back (go-dead back)))
-      (message "final score: %s" (with-backends back (go-score back))))))
+            (go-dead *sgf*))
+      (message "final score: %s" (go-score *sgf*)))))
 
 (defun go-board-undo (&optional num)
   (interactive "p")
-  (with-backends back (go-undo back))
+  (go-undo *sgf*)
   (pop *history*)
   (update-display (current-buffer))
   (setf *turn* (other-color *turn*)))
 
 (defun go-board-comment (&optional comment)
   (interactive "MComment: ")
-  (with-backends back (setf (go-comment back) comment)))
+  (setf (go-comment *sgf*) comment))
 
 (defun go-board-level (&optional level)
   (interactive "nLevel: ")
-  (with-backends back (setf (go-level back) level)))
+  (setf (go-level *sgf*) level))
 
 (defun go-board-next (&optional count)
   (interactive "p")
   (let (move)
     (dotimes (n (or count 1) move)
-      (setf move (go-move *back-end*))
+      (setf move (go-move *sgf*))
       (if (equal move :pass)
           (message "pass")
         (setf *turn* (other-color *turn*))
         (apply-turn-to-board
-         (cons move (go-labels *back-end*))))
+         (cons move (go-labels *sgf*))))
       (if (equal move :pass)
           (goto-char (point-min))
         (goto-char (point-of-pos (cddr move)))))))
@@ -435,7 +427,7 @@
     (kill-buffer (current-buffer))))
 
 (defun go-board-safe-quit ()
-  (ignore-errors (with-backends tr (go-quit tr)))
+  (ignore-errors (go-quit *sgf*))
   t)
 
 

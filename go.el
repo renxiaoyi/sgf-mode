@@ -23,16 +23,6 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-;;; Commentary:
-
-;; A board-based interface to GO games which may be connected to a
-;; number of GO back-ends through a generic API.  To play a game of GO
-;; against the gnugo back-end run `play-go'.  Current back-ends
-;; include the following.
-;; - the SGF format
-;; - the Go Text Protocol (GTP)
-;; - TODO: the IGS protocol
-
 ;;; Code:
 (let ((load-path
        (cons (file-name-directory (or load-file-name (buffer-file-name)))
@@ -43,30 +33,6 @@
   (require 'sgf             "sgf.el")
   (require 'sgf2el          "sgf2el.el"))
 
-(defun go-instantiate (back-end)
-  (interactive)
-  ;; TODO: read and set handicap.
-  (let ((it (make-instance back-end))
-        (size (read (go-completing-read
-                     "board size: "
-                     (mapcar #'number-to-string '(19 13 9))))))
-    (go-connect it)
-    (setf (go-size it) size)
-    it))
-
-;;;###autoload
-(defun go-play ()
-  "Play a game of GO."
-  (interactive)
-  (let ((back-end (case (intern (go-completing-read
-                                 "play against: " '("gnugo" "person")))
-                    (gnugo  (go-instantiate 'gnugo))
-                    (person (go-instantiate 'sgf)))))
-    (with-current-buffer (apply #'go-board
-                                (cons back-end
-                                      (unless (equal (class-of back-end) 'sgf)
-                                        (list (make-instance 'sgf))))))))
-
 ;;;###autoload
 (defun go-view-sgf (&optional file)
   "View an SGF file."
@@ -75,7 +41,7 @@
   (let* ((sgf (make-instance 'sgf :self (sgf2el-file-to-el file) :index '(0)))
          (buffer (go-board sgf)))
     (with-current-buffer buffer
-      (setf (index *back-end*) (list 0)))))
+      (setf (index *sgf*) (list 0)))))
 
 ;;;###autoload
 (defun go-reload-sgf ()
