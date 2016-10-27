@@ -38,19 +38,19 @@
   "View an SGF file."
   (interactive "fSGF file: ")
   (setq *sgf-file* file)
-  (let* ((sgf (make-instance 'sgf :self (sgf2el-file-to-el file) :index '(0)))
-         (buffer (go-board sgf)))
-    (with-current-buffer buffer
-      (setf (index *sgf*) (list 0)))))
+  (let ((sgf (make-instance 'sgf
+                            :self (sgf2el-file-to-el file)
+                            :index (copy-list '(0))))) ; uses copy-list to avoid modifying '(0)
+    (go-board sgf)))
 
 ;;;###autoload
 (defun go-reload-sgf ()
   "Reloads the current SGF file."
   (interactive)
-  (let ((sgf (make-instance 'sgf :self (sgf2el-file-to-el *sgf-file*) :index '(0))))
-    (go-board-in-buffer sgf (current-buffer))
-    (setf (index sgf) '(0))))
-    
-    
+  (let ((sgf (make-instance 'sgf
+                            :self (sgf2el-file-to-el *sgf-file*)
+                            :index (copy-list '(0)))))
+    (go-board-in-buffer sgf (current-buffer))))
+
 (provide 'go)
 ;;; go.el ends here

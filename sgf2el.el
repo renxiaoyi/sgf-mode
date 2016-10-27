@@ -68,10 +68,10 @@
         last-node)
     (save-excursion (goto-char start)
       (while (re-search-forward re end t)
-        (let ((start (marker-position start)))
-          (message "parsing %.2f%%"
-                   (* 100 (/ (float (- (point) start))
-                             (float (- (marker-position end) start))))))
+        ;; (let ((start (marker-position start)))
+        ;;   (message "parsing %.2f%%"
+        ;;            (* 100 (/ (float (- (point) start))
+        ;;                      (float (- (marker-position end) start))))))
         (if (string= (match-string 6) ";")
             (progn
               (replace-match "(" nil nil nil 6)
@@ -85,7 +85,8 @@
                                                   (car val) val)))))
             (replace-match rep nil 'literal))))
       (when last-node (insert ")")))
-    (message "parsing DONE")))
+    ;(message "parsing DONE")
+    ))
 
 (defun sgf2el (&optional sgf-buffer)
   "Convert the content of SGF-BUFFER to emacs-lisp in a new buffer."

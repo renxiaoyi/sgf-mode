@@ -40,7 +40,6 @@
 Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
   (let ((part sgf))
     (while (car index)
-      (assert (>= (car index) 0))
       (setq part (nth (car index) part))
       (setq index (cdr index)))
     part))
@@ -94,12 +93,16 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
 (defmethod next ((sgf sgf))
   "Increments the last element of sgf.index."
   (incf (car (last (index sgf))))
-  (print (current sgf))
   (if (> (length (current sgf)) 1)  ; meets a variant
-      (nconc (index sgf) '(1))))  ; always chooses the first branch
+      (nconc (index sgf) '(0)))
+  (print (current sgf))
+  (print (index sgf)))  ; always chooses the first branch
 
 (defmethod prev ((sgf sgf))
-  (decf (car (last (index sgf)))))
+  (if (= 0 (car (last (index sgf))))
+      (setf (index sgf) (butlast (index sgf))))
+  (decf (car (last (index sgf))))
+  (print (index sgf)))
 
 
 ;;; interface
