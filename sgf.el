@@ -27,14 +27,6 @@
 ;; Code:
 (require 'eieio)
 
-;; (defun sgf-nthcdr (sgf index)
-;;   (let ((part sgf))
-;;     (while (cdr index)
-;;       (setq part (nth (car index) part))
-;;       (setq index (cdr index)))
-;;     (setq part (nthcdr (car index) part))
-;;     part))
-
 (defun sgf-ref (sgf index)
   "Returns the move in sgf pointed by index.
 Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
@@ -90,13 +82,26 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
 
 (defsetf root set-root)
 
+(defmethod next-moves ((sgf sgf))
+  "Finds the next move(s) without changing the index."
+  (let ((index (copy-list (index sgf))))
+    (incf (car (last index)))
+    (let ((node (sgf-ref (self sgf) index)) (ret))
+      (if (= (length node) 1)
+          node
+        (rpush (caar node) ret)
+        (incf (car (last index)))
+        (while (setq node (sgf-ref (self sgf) index))
+          (rpush (caar node) ret)
+          (incf (car (last index))))
+        ret))))
+
 (defmethod next ((sgf sgf))
   "Increments the last element of sgf.index."
   (incf (car (last (index sgf))))
   (if (> (length (current sgf)) 1)  ; meets a variant
       (nconc (index sgf) '(0)))
-  (print (current sgf))
-  (print (index sgf)))  ; always chooses the first branch
+  (print (current sgf))) ; always chooses the first branch
 
 (defmethod prev ((sgf sgf))
   (if (= 0 (car (last (index sgf))))

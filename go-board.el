@@ -63,7 +63,7 @@
 
 (defun point-of-pos (pos)
   (catch 'found-pos
-    (dotimes (p (1- (point-max)) (error "go: pos %S not found" pos))
+    (dotimes (p (1- (point-max)) (error "point-of-pos: pos %S not found" pos))
       (let ((pos-at-point (get-text-property (1+ p) :pos)))
         (when (and pos-at-point (tree-equal pos pos-at-point))
           (throw 'found-pos (1+ p)))))))
@@ -393,7 +393,8 @@
   (go-undo *sgf*)
   (pop *history*)
   (update-display (current-buffer))
-  (setf *turn* (other-color *turn*)))
+  (setf *turn* (other-color *turn*))
+  (go-board-show-next))
 
 (defun go-board-comment (&optional comment)
   (interactive "MComment: ")
@@ -415,7 +416,18 @@
          (cons move (go-labels *sgf*))))
       (if (equal move :pass)
           (goto-char (point-min))
-        (goto-char (point-of-pos (cddr move)))))))
+        (goto-char (point-of-pos (cddr move))))))
+  (go-board-show-next))
+
+(defun go-board-show-next ()
+  (let ((char 97))  ; "a"
+    (dolist (move (next-moves *sgf*))
+      (go-board-mark-point
+       (point-of-pos (cddr move))
+       (go-board-label
+        (ecase (car move) (:B 'black) (:W 'white))
+        (char-to-string char)))
+      (incf char))))
 
 (defun go-board-mouse-move (ev)
   (interactive "e")
