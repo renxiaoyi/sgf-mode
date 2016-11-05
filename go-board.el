@@ -289,7 +289,8 @@
                   "\n\n"
                   comment)))
       (go-board-paint)
-      (goto-char point)))
+      (goto-char point))
+    (go-board-show-next))
   buffer)
 
 (defun go-board (sgf)
@@ -393,8 +394,7 @@
   (go-undo *sgf*)
   (pop *history*)
   (update-display (current-buffer))
-  (setf *turn* (other-color *turn*))
-  (go-board-show-next))
+  (setf *turn* (other-color *turn*)))
 
 (defun go-board-comment (&optional comment)
   (interactive "MComment: ")
@@ -404,11 +404,11 @@
   (interactive "nLevel: ")
   (setf (go-level *sgf*) level))
 
-(defun go-board-next (&optional count)
+(defun go-board-next (&optional branch count)
   (interactive "p")
   (let (move)
     (dotimes (n (or count 1) move)
-      (setf move (go-move *sgf*))
+      (setf move (go-move *sgf* (or branch 0)))
       (if (equal move :pass)
           (message "pass")
         (setf *turn* (other-color *turn*))
@@ -416,19 +416,20 @@
          (cons move (go-labels *sgf*))))
       (if (equal move :pass)
           (goto-char (point-min))
-        (goto-char (point-of-pos (cddr move))))))
-  (go-board-show-next))
+        (goto-char (point-of-pos (cddr move)))))))
 
 (defun go-board-show-next ()
   (let ((char 97))  ; "a"
     (dolist (move (next-moves *sgf*))
-      (go-board-mark-point
-       (point-of-pos (cddr move))
-       (go-board-label
-        (ecase (car move) (:B 'black) (:W 'white))
-        (char-to-string char)))
-      (incf char))))
-
+      (if move
+          (progn
+            (go-board-mark-point
+             (point-of-pos (cddr move))
+             (go-board-label
+              (ecase (car move) (:B 'black) (:W 'white))
+              (char-to-string char)))
+            (incf char))))))
+    
 (defun go-board-mouse-move (ev)
   (interactive "e")
   (go-board-move (get-text-property (posn-point (event-start ev)) :pos)))
@@ -447,16 +448,21 @@
 (defvar go-board-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "<mouse-1>") 'go-board-mouse-move)
-    (define-key map (kbd "m") 'go-board-move)
-    (define-key map (kbd "r") 'go-board-refresh)
-    (define-key map (kbd "R") 'go-board-resign)
-    (define-key map (kbd "u") 'go-board-undo)
-    (define-key map (kbd "c") 'go-board-comment)
-    (define-key map (kbd "l") 'go-board-level)
-    (define-key map (kbd "p") 'go-board-pass)
-    (define-key map (kbd "<right>") 'go-board-next)
-    (define-key map (kbd "<left>")  'go-board-undo)
-    (define-key map (kbd "q") 'go-board-quit)
+    (define-key map (kbd "RET") 'go-board-move)
+    (define-key map (kbd "R") 'go-board-refresh)
+    (define-key map (kbd "S") 'go-board-resign)
+    (define-key map (kbd "C") 'go-board-comment)
+    (define-key map (kbd "L") 'go-board-level)
+    (define-key map (kbd "P") 'go-board-pass)
+    (define-key map (kbd "Q") 'go-board-quit)
+    ;(define-key map (kbd "<right>") 'go-board-next)
+    ;(define-key map (kbd "<left>")  'go-board-undo)
+
+    (define-key map (kbd "SPC") 'go-board-undo)
+    (define-key map (kbd "a") (kbd "C-u 0 M-x go-board-next"))
+    (define-key map (kbd "b") (kbd "C-u 1 M-x go-board-next"))
+    (define-key map (kbd "c") (kbd "C-u 2 M-x go-board-next"))
+    (define-key map (kbd "d") (kbd "C-u 3 M-x go-board-next"))
     map)
   "Keymap for `go-board-mode'.")
 

@@ -96,18 +96,34 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
           (incf (car (last index))))
         ret))))
 
-(defmethod next ((sgf sgf))
-  "Increments the last element of sgf.index."
-  (incf (car (last (index sgf))))
-  (if (> (length (current sgf)) 1)  ; meets a variant
-      (nconc (index sgf) '(0)))
-  (print (current sgf))) ; always chooses the first branch
+(defun variationp (node)
+  "Returns t if the input sgf node is a variation line, otherwise nil."
+  (if (<= (length node) 1)
+      nil
+    t)) ; TODO: implement this.
+
+(defmethod next ((sgf sgf) branch)
+  "Updates sgf.index to point to the next move."
+  "TODO: fix out of bound problem."
+  (incf (car (last (index sgf))))  ; increments the last element
+  (if (variationp (current sgf))
+      (progn
+        (nconc (index sgf) '(0))
+        (incf (car (last (index sgf) 2)) branch))) ; jumps to the given branch
+  (print (index sgf))
+  (print (current sgf)))
 
 (defmethod prev ((sgf sgf))
-  (if (= 0 (car (last (index sgf))))
-      (setf (index sgf) (butlast (index sgf))))
-  (decf (car (last (index sgf))))
-  (print (index sgf)))
+  (if (equal (index sgf) '(0))
+      (print "sgf: no prev moves")
+    (if (= 0 (car (last (index sgf))))
+        (setf (index sgf) (butlast (index sgf))))
+    (decf (car (last (index sgf))))
+    (while (and (> (car (index sgf)) 0)
+                (variationp (current sgf)))  ; in variation, should go back to root
+      (decf (car (last (index sgf))))))
+  (print (index sgf))
+  (print (current sgf)))
 
 
 ;;; interface
@@ -138,14 +154,13 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
    ((aget (root sgf) :EV) (setf (cdr (assoc :EV (root sgf))) name))
    (t                     (push (cons :GN name) (root sgf)))))
 
-(defmethod go-move ((sgf sgf))
-  (next sgf)
-  (print sgf)
+(defmethod go-move ((sgf sgf) &optional branch)
+  (next sgf (or branch 0))
   (let ((turn (current sgf)))
     (if turn
         (or (assoc :B turn) (assoc :W turn))
       (prev sgf)
-      (error "sgf: no more moves"))))
+      (print "sgf: no more moves"))))
 
 ;; TODO: currently this only works with linear sgf files w/o alternatives
 (defmethod set-go-move ((sgf sgf) move)
@@ -159,7 +174,7 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
     (if turn
         (remove-if-not (lambda (pair) (member (car pair) '(:LB :LW))) turn)
       (prev sgf)
-      (error "sgf: no more moves"))))
+      (print "sgf: no more moves"))))
 
 (defmethod set-go-lables ((sgf sgf) labels)
   (if (current sgf)
@@ -190,8 +205,7 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
 
 ;; non setf'able generic functions
 (defmethod go-undo ((sgf sgf))
-  (prev sgf)
-  (print sgf))
+  (prev sgf))
 
 (defmethod go-pass ((sgf sgf))
   (signal 'unsupported-back-end-command (list sgf :pass)))
