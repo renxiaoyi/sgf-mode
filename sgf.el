@@ -87,8 +87,8 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
   (let ((index (copy-list (index sgf))))
     (incf (car (last index)))
     (let ((node (sgf-ref (self sgf) index)) (ret))
-      (if (= (length node) 1)
-          node
+      (if (not (variationp node))
+          (list (car node))  ; removes non-position properties like comments
         (rpush (caar node) ret)
         (incf (car (last index)))
         (while (setq node (sgf-ref (self sgf) index))
@@ -97,10 +97,15 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
         ret))))
 
 (defun variationp (node)
-  "Returns t if the input sgf node is a variation line, otherwise nil."
-  (if (<= (length node) 1)
-      nil
-    t)) ; TODO: implement this.
+  "Returns t if node is a variation line, otherwise nil.
+Example:
+  (((:B :pos 13 . 3))((:W :pos 17 . 3))((:B :pos 16 . 2))) => t
+  ((:B :pos 15 . 3)) => nil
+  ((:B :pos 16 . 3) (:LB ((:label . \"1\") (:pos 16 . 3))) (:C . \"Lee Sedol played Black.\")) => nil"
+  (cond ((not (listp node)) nil)
+        ((not (listp (car node))) nil)
+        ((not (listp (caar node))) nil)
+        (t t)))
 
 (defmethod next ((sgf sgf) branch)
   "Updates sgf.index to point to the next move."
@@ -109,7 +114,7 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
   (if (variationp (current sgf))
       (progn
         (nconc (index sgf) '(0))
-        (incf (car (last (index sgf) 2)) branch))) ; jumps to the given branch
+        (incf (car (last (index sgf) 2)) branch)))  ; jumps to the given branch
   (print (index sgf))
   (print (current sgf)))
 
