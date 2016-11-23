@@ -68,14 +68,20 @@
         (when (and pos-at-point (tree-equal pos pos-at-point))
           (throw 'found-pos (1+ p)))))))
 
-(defun apply-turn-to-board (moves)
+(defun apply-turn-to-board (turn)
+  "Updates the board by adding one 'turn', then displays.
+The input 'turn' is actually one sgf node, which may contain multiple elements ('moves'), e.g.:
+  - ((:B :pos 15 . 3))  ; one move 
+  - ((:W :pos 16 . 5) (:LB ((:label . '1') (:pos 16 . 3))))  ; two moves"
   (let ((board (pieces-to-board (car *history*) *size*)))
     (clear-labels board)
-    (dolist (move moves) (apply-move board move))
+    (dolist (move turn) (apply-move board move))
     (push (board-to-pieces board) *history*)
+    (print `("history: " ,*history*))
     (update-display (current-buffer))))
 
 (defun apply-move (board move)
+  "Updates the board by adding one 'move', i.e. one element of a 'turn'."
   (cl-flet ((bset (val data)
                (let ((data (if (listp (car data)) data (list data))))
                  (setf (aref board (pos-to-index (aget data :pos)
@@ -85,7 +91,7 @@
                          (:W  :W)
                          (:LB (aget data :label))
                          (:LW (aget data :label))
-                         (t nil))))))
+                         (t nil))))))  ; updates board point at :pos to val
     (case (move-type move)
       (:move
        (bset (car move) (cdr move))
@@ -136,6 +142,7 @@
     (dolist (n cull cull) (setf (aref board n) nil))))
 
 (defun board-to-pieces (board)
+  "'pieces' is a list of pairs (board-value . board-index) to represent the board."
   (let (pieces)
     (dotimes (n (length board) pieces)
       (let ((val (aref board n)))
@@ -231,15 +238,15 @@
              (let ((ovly (make-overlay point (1+ point))))
                (overlay-put ovly 'go-pt point)
                (overlay-put ovly 'face (sym-cat 'go-board face))
-               (when go-board-use-images
-                 (overlay-put ovly 'display
-                              (if (equal face 'filler)
-                                  '(space :width (18))
-                                (eval (sym-cat 'go-board 'image face back)))))
+               (if go-board-use-images
+                   (overlay-put ovly 'display
+                                (if (equal face 'filler)
+                                    '(space :width (18))
+                                  (eval (sym-cat 'go-board 'image face back)))))
                (push ovly *go-board-overlays*)))
          (hide (point)
                (let ((ovly (make-overlay point (1+ point))))
-                 (overlay-put ovly 'invisible t)
+                 ;(overlay-put ovly 'invisible t)
                  (push ovly *go-board-overlays*))))
     (let ((start (or start (point-min)))
           (end   (or end   (point-max))))

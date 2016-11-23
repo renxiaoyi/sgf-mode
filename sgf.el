@@ -87,7 +87,7 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
   (let ((index (copy-list (index sgf))))
     (incf (car (last index)))
     (let ((node (sgf-ref (self sgf) index)) (ret))
-      (if (not (variationp node))
+      (if (not (variation-p node))
           (list (car node))  ; removes non-position properties like comments
         (rpush (caar node) ret)
         (incf (car (last index)))
@@ -96,7 +96,7 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
           (incf (car (last index))))
         ret))))
 
-(defun variationp (node)
+(defun variation-p (node)
   "Returns t if node is a variation line, otherwise nil.
 Example:
   (((:B :pos 13 . 3))((:W :pos 17 . 3))((:B :pos 16 . 2))) => t
@@ -105,13 +105,14 @@ Example:
   (cond ((not (listp node)) nil)
         ((not (listp (car node))) nil)
         ((not (listp (caar node))) nil)
-        (t t)))
+        (t t)))  ; is move-type necessary?
 
 (defmethod next ((sgf sgf) branch)
   "Updates sgf.index to point to the next move."
   "TODO: fix out of bound problem."
+  (print `("enter next: " ,sgf))
   (incf (car (last (index sgf))))  ; increments the last element
-  (if (variationp (current sgf))
+  (if (variation-p (current sgf))
       (progn
         (nconc (index sgf) '(0))
         (incf (car (last (index sgf) 2)) branch)))  ; jumps to the given branch
@@ -125,7 +126,7 @@ Example:
         (setf (index sgf) (butlast (index sgf))))
     (decf (car (last (index sgf))))
     (while (and (> (car (index sgf)) 0)
-                (variationp (current sgf)))  ; in variation, should go back to root
+                (variation-p (current sgf)))  ; in variation, should go back to root
       (decf (car (last (index sgf))))))
   (print (index sgf))
   (print (current sgf)))
