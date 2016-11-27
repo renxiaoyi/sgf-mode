@@ -96,7 +96,7 @@
 (defun go-board-label (color label)
   (go-board-svg-trans
    `((text (x . 8.75) (y . 16.25) (r . 12.25)
-           (style . ,(format "font-size:20;fill:%s;" color)))
+           (style . ,(format "font-size:15;fill:%s;" color)))
      ,label)))
 
 (defun go-board-mark (overlay mark)

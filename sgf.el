@@ -110,14 +110,11 @@ Example:
 (defmethod next ((sgf sgf) branch)
   "Updates sgf.index to point to the next move."
   "TODO: fix out of bound problem."
-  (print `("enter next: " ,sgf))
   (incf (car (last (index sgf))))  ; increments the last element
   (if (variation-p (current sgf))
       (progn
         (nconc (index sgf) '(0))
-        (incf (car (last (index sgf) 2)) branch)))  ; jumps to the given branch
-  (print (index sgf))
-  (print (current sgf)))
+        (incf (car (last (index sgf) 2)) branch))))  ; jumps to the given branch
 
 (defmethod prev ((sgf sgf))
   (if (equal (index sgf) '(0))
@@ -127,9 +124,7 @@ Example:
     (decf (car (last (index sgf))))
     (while (and (> (car (index sgf)) 0)
                 (variation-p (current sgf)))  ; in variation, should go back to root
-      (decf (car (last (index sgf))))))
-  (print (index sgf))
-  (print (current sgf)))
+      (decf (car (last (index sgf)))))))
 
 
 ;;; interface

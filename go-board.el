@@ -24,12 +24,13 @@
 (require 'go-util)
 (require 'go-board-faces)
 
-(defvar *history*  nil "Holds the board history for a GO buffer.")
-(defvar *size*     nil "Holds the board size.")
-(defvar *turn*     nil "Holds the color of the current turn.")
-(defvar *black*    nil "Plist of info on black player.")
-(defvar *white*    nil "Plist of info on white player.")
-(defvar *sgf*      nil "The sgf object representing the board.")
+(defvar *history* nil "Holds the move history.")
+(defvar *label-history*  nil "Holds the label history.")
+(defvar *size* nil "Holds the board size.")
+(defvar *turn* nil "Holds the color of the current turn.")
+(defvar *black* nil "Plist of info on black player.")
+(defvar *white* nil "Plist of info on white player.")
+(defvar *sgf* nil "The sgf object representing the board.")
 (defvar *sgf-file* nil "Path to the current sgf file.")
 
 (defvar black-piece "X")
@@ -70,36 +71,32 @@
 
 (defun apply-turn-to-board (turn)
   "Updates the board by adding one 'turn', then displays.
-The input 'turn' is actually one sgf node, which may contain multiple elements ('moves'), e.g.:
-  - ((:B :pos 15 . 3))  ; one move 
+The input 'turn' is actually one sgf node, which may contain multiple elements ('move'), e.g.:
+  - ((:B :pos 15 . 3))  ; one move
   - ((:W :pos 16 . 5) (:LB ((:label . '1') (:pos 16 . 3))))  ; two moves"
-  (let ((board (pieces-to-board (car *history*) *size*)))
-    (clear-labels board)
-    (dolist (move turn) (apply-move board move))
-    (push (board-to-pieces board) *history*)
-    (print `("history: " ,*history*))
-    (update-display (current-buffer))))
-
-(defun apply-move (board move)
-  "Updates the board by adding one 'move', i.e. one element of a 'turn'."
-  (cl-flet ((bset (val data)
-               (let ((data (if (listp (car data)) data (list data))))
-                 (setf (aref board (pos-to-index (aget data :pos)
-                                                 (board-size board)))
-                       (case val
-                         (:B  :B)
-                         (:W  :W)
-                         (:LB (aget data :label))
-                         (:LW (aget data :label))
-                         (t nil))))))  ; updates board point at :pos to val
-    (case (move-type move)
-      (:move
-       (bset (car move) (cdr move))
-       (let ((color (if (equal :B (car move)) :B :W)))
-         (remove-dead board (other-color color))
-         (remove-dead board color)))
-      (:label
-       (dolist (data (cdr move)) (bset (car move) data))))))
+  (cl-flet ((bset (val data)  ; sets board point at :pos
+                  (let ((data (list data)))
+                    (setf (aref board (pos-to-index (aget data :pos)
+                                                    (board-size board)))
+                          val)))
+            (lcol (data)  ; collects label at :pos
+                  (push (cons (aget data :label)
+                              (point-of-pos (aget data :pos)))
+                        labels)))
+    (let ((board (pieces-to-board (car *history*) *size*)) (labels))
+      (clear-labels board)
+      (dolist (move turn)
+        (case (move-type move)
+          (:move
+           (bset (car move) (cdr move))
+           (let ((color (if (equal :B (car move)) :B :W)))
+             (remove-dead board (other-color color))
+             (remove-dead board color)))
+          (:label
+           (dolist (data (cdr move)) (lcol data)))))
+        (push (board-to-pieces board) *history*)
+        (push labels *label-history*)
+        (update-display (current-buffer)))))
 
 (defun clear-labels (board)
   (dotimes (point (length board) board)
@@ -142,13 +139,18 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
     (dolist (n cull cull) (setf (aref board n) nil))))
 
 (defun board-to-pieces (board)
-  "'pieces' is a list of pairs (board-value . board-index) to represent the board."
+  "'pieces' is a list of pairs (board-value . board-index) to represent the board.
+Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
+
+'board' is a size*size vector storing :B, :W or empty. 
+"
   (let (pieces)
     (dotimes (n (length board) pieces)
       (let ((val (aref board n)))
         (when val (push (cons val n) pieces))))))
 
 (defun pieces-to-board (pieces size)
+  "See board-to-pieces."
   (let ((board (make-vector (* size size) nil)))
     (dolist (piece pieces board)
       (setf (aref board (cdr piece)) (car piece)))))
@@ -246,7 +248,7 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
                (push ovly *go-board-overlays*)))
          (hide (point)
                (let ((ovly (make-overlay point (1+ point))))
-                 ;(overlay-put ovly 'invisible t)
+                 (overlay-put ovly 'invisible t)
                  (push ovly *go-board-overlays*))))
     (let ((start (or start (point-min)))
           (end   (or end   (point-max))))
@@ -297,6 +299,7 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
                   comment)))
       (go-board-paint)
       (goto-char point))
+    (go-board-add-label (car *label-history*))
     (go-board-show-next))
   buffer)
 
@@ -318,6 +321,7 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
     (set (make-local-variable '*go-board-overlays*) nil)
     (set (make-local-variable '*history*)
          (list (board-to-pieces (make-board *size*)))))
+    (set (make-local-variable '*label-history*) nil)
   (pop-to-buffer buffer)
   (plist-put *black* :prisoners 0)
   (plist-put *white* :prisoners 0)
@@ -400,6 +404,7 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
   (interactive "p")
   (go-undo *sgf*)
   (pop *history*)
+  (pop *label-history*)
   (update-display (current-buffer))
   (setf *turn* (other-color *turn*)))
 
@@ -436,6 +441,13 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
               (ecase (car move) (:B 'black) (:W 'white))
               (char-to-string char)))
             (incf char))))))
+
+(defun go-board-add-label (labels)
+  (dolist (label labels)  ; label is a list (text . point)
+    (if label
+        (go-board-mark-point
+         (cdr label)
+         (go-board-label 'red (car label))))))
     
 (defun go-board-mouse-move (ev)
   (interactive "e")
