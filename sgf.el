@@ -113,7 +113,7 @@ Example:
   (incf (car (last (index sgf))))  ; increments the last element
   (if (variation-p (current sgf))
       (progn
-        (setf (index sgf) (append (index sgf) '(0)))
+        (nconc (index sgf) (list 0))
         (incf (car (last (index sgf) 2)) branch))))  ; jumps to the given branch
 
 (defmethod prev ((sgf sgf))
