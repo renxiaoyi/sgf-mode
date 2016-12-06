@@ -66,6 +66,10 @@
         (end   (copy-marker (or end   (point-max))))
         (re    (format "\\(%s\\|%s\\)" prop-re "\\(([[:space:]]*\\)*\\(;\\)"))
         last-node)
+    ;; re: ( ([[:alpha:]]+) ( ([]|[[:space:]]*[[^\000]*?[^]])+ ) | (\([[:space:]]*)* (;) )
+    ;;     | |              | |                                    |                 |
+    ;;     1 2              3 4                                    5                 6
+    ;; 0 is the whole match, and here 1 is the same with 0
     (save-excursion (goto-char start)
       (while (re-search-forward re end t)
         ;; (let ((start (marker-position start)))
@@ -79,14 +83,12 @@
                 (save-excursion (goto-char (match-beginning 0)) (insert ")")))
               (setq last-node t))
           (let* ((key (sgf2el-convert-prop-key (match-string 2)))
-                 (val (sgf2el-convert-prop-vals key
-                       (sgf2el-all-matches (match-string 3) prop-val-re 2)))
+                 (tmp (sgf2el-all-matches (match-string 3) prop-val-re 2))
+                 (val (sgf2el-convert-prop-vals key tmp))
                  (rep (format "%S " (cons key (if (= 1 (length val))
                                                   (car val) val)))))
             (replace-match rep nil 'literal))))
-      (when last-node (insert ")")))
-    ;(message "parsing DONE")
-    ))
+      (when last-node (insert ")")))))
 
 (defun sgf2el (&optional sgf-buffer)
   "Convert the content of SGF-BUFFER to emacs-lisp in a new buffer."
@@ -145,7 +147,10 @@
           (char-to-num (aref position-string 1)))))
 
 (defun process-move (move-args)
-  (list (cons :pos (process-position (car move-args)))))
+  (if (equal move-args '(nil))
+      ;; Empty move: pass.
+      (list :pass)
+    (list (cons :pos (process-position (car move-args))))))
 (add-to-list 'sgf2el-special-properties (cons :B #'process-move))
 (add-to-list 'sgf2el-special-properties (cons :W #'process-move))
 
