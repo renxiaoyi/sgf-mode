@@ -56,6 +56,7 @@
 
 (defun move-type (move)
   (cond
+   ((equal (cdr move) :pass) :pass)
    ((member (car move) '(:B  :W))  :move)
    ((member (car move) '(:LB :LW)) :label)))
 
@@ -93,7 +94,8 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
              (remove-dead board (other-color color))
              (remove-dead board color)))
           (:label
-           (dolist (data (cdr move)) (lcol data)))))
+           (dolist (data (cdr move)) (lcol data)))
+          (:pass (message "pass"))))
         (push (board-to-pieces board) *history*)
         (push labels *label-history*)
         (update-display (current-buffer)))))
@@ -142,7 +144,7 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
   "'pieces' is a list of pairs (board-value . board-index) to represent the board.
 Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
 
-'board' is a size*size vector storing :B, :W or empty. 
+'board' is a size*size vector storing :B, :W or empty.
 "
   (let (pieces)
     (dotimes (n (length board) pieces)
@@ -421,12 +423,10 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
   (let (move)
     (dotimes (n (or count 1) move)
       (setf move (go-move *sgf* (or branch 0)))
-      (if (equal move :pass)
-          (message "pass")
-        (setf *turn* (other-color *turn*))
-        (apply-turn-to-board
-         (cons move (go-labels *sgf*))))
-      (if (equal move :pass)
+      (setf *turn* (other-color *turn*))
+      (apply-turn-to-board
+       (cons move (go-labels *sgf*)))
+      (if (equal (cdr move) :pass)
           (goto-char (point-min))
         (goto-char (point-of-pos (cddr move)))))))
 
@@ -434,7 +434,10 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
   (let ((char 97))  ; "a"
     (dolist (move (next-moves *sgf*))
       (if move
-          (progn
+          (if (equal (cdr move) :pass)
+              (progn
+                (message "%s to pass" (char-to-string char))
+                (incf char))
             (go-board-mark-point
              (point-of-pos (cddr move))
              (go-board-label
@@ -448,7 +451,7 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
         (go-board-mark-point
          (cdr label)
          (go-board-label 'red (car label))))))
-    
+
 (defun go-board-mouse-move (ev)
   (interactive "e")
   (go-board-move (get-text-property (posn-point (event-start ev)) :pos)))

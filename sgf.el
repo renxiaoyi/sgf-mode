@@ -118,7 +118,7 @@ Example:
 
 (defmethod prev ((sgf sgf))
   (if (equal (index sgf) '(0))
-      (print "sgf: no prev moves")
+      (message "sgf: no prev moves")
     (if (= 0 (car (last (index sgf))))
         (setf (index sgf) (butlast (index sgf))))
     (decf (car (last (index sgf))))
@@ -161,7 +161,7 @@ Example:
     (if turn
         (or (assoc :B turn) (assoc :W turn))
       (prev sgf)
-      (print "sgf: no more moves"))))
+      (message "sgf: no more moves"))))
 
 ;; TODO: currently this only works with linear sgf files w/o alternatives
 (defmethod set-go-move ((sgf sgf) move)
@@ -175,7 +175,7 @@ Example:
     (if turn
         (remove-if-not (lambda (pair) (member (car pair) '(:LB :LW))) turn)
       (prev sgf)
-      (print "sgf: no more moves"))))
+      (message "sgf: no more moves"))))
 
 (defmethod set-go-lables ((sgf sgf) labels)
   (if (current sgf)
