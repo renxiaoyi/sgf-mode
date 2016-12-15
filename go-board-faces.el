@@ -21,6 +21,9 @@
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
+(defface go-board-filler nil
+  "to avoid prompting 'Invalid face reference: go-board-filler'")
+
 (defface go-board-background
   '((t (:background "#b36108" :foreground "#6f3c04")))
   "woodsy background")

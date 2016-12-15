@@ -160,8 +160,8 @@ Example:
   (let ((turn (current sgf)))
     (if turn
         (or (assoc :B turn) (assoc :W turn))
-      (prev sgf)
-      (message "sgf: no more moves"))))
+      (message "sgf: no more moves")
+      (prev sgf))))
 
 ;; TODO: currently this only works with linear sgf files w/o alternatives
 (defmethod set-go-move ((sgf sgf) move)
@@ -174,8 +174,8 @@ Example:
   (let ((turn (current sgf)))
     (if turn
         (remove-if-not (lambda (pair) (member (car pair) '(:LB :LW))) turn)
-      (prev sgf)
-      (message "sgf: no more moves"))))
+      (message "sgf: no more moves")
+      (prev sgf))))
 
 (defmethod set-go-lables ((sgf sgf) labels)
   (if (current sgf)

@@ -423,12 +423,14 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
   (let (move)
     (dotimes (n (or count 1) move)
       (setf move (go-move *sgf* (or branch 0)))
-      (setf *turn* (other-color *turn*))
-      (apply-turn-to-board
-       (cons move (go-labels *sgf*)))
-      (if (equal (cdr move) :pass)
-          (goto-char (point-min))
-        (goto-char (point-of-pos (cddr move)))))))
+      (if move  ; move is nil if already at the last move
+          (progn
+            (setf *turn* (other-color *turn*))
+            (apply-turn-to-board
+             (cons move (go-labels *sgf*)))
+            (if (equal (cdr move) :pass)
+                (goto-char (point-min))
+              (goto-char (point-of-pos (cddr move)))))))))
 
 (defun go-board-show-next ()
   (let ((char 97))  ; "a"
