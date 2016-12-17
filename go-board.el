@@ -97,8 +97,7 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
            (dolist (data (cdr move)) (lcol data)))
           (:pass (message "pass"))))
         (push (board-to-pieces board) *history*)
-        (push labels *label-history*)
-        (update-display (current-buffer)))))
+        (push labels *label-history*))))
 
 (defun clear-labels (board)
   (dotimes (point (length board) board)
@@ -301,8 +300,7 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
                   comment)))
       (go-board-paint)
       (goto-char point))
-    (go-board-add-label (car *label-history*))
-    (go-board-show-next))
+    (go-board-add-label (car *label-history*)))
   buffer)
 
 (defun go-board (sgf)
@@ -328,7 +326,8 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
   (plist-put *black* :prisoners 0)
   (plist-put *white* :prisoners 0)
   (setq truncate-lines t)
-  (update-display buffer))
+  (update-display buffer)
+  (go-board-show-next))
 
 
 ;;; User input
@@ -365,11 +364,13 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
          (move (cons *turn* (cons :pos pos))))
     (setf (go-move *sgf*) move)
     (setf *turn* (other-color *turn*))
-    (apply-turn-to-board (list move))))
+    (apply-turn-to-board (list move))
+    (update-display (current-buffer))))
 
 (defun go-board-refresh ()
   (interactive)
-  (update-display (current-buffer)))
+  (update-display (current-buffer))
+  (go-board-show-next))
 
 (defun go-board-resign ()
   (interactive)
@@ -402,14 +403,6 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
             (go-dead *sgf*))
       (message "final score: %s" (go-score *sgf*)))))
 
-(defun go-board-undo (&optional num)
-  (interactive "p")
-  (go-undo *sgf*)
-  (pop *history*)
-  (pop *label-history*)
-  (update-display (current-buffer))
-  (setf *turn* (other-color *turn*)))
-
 (defun go-board-comment (&optional comment)
   (interactive "MComment: ")
   (setf (go-comment *sgf*) comment))
@@ -417,6 +410,15 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
 (defun go-board-level (&optional level)
   (interactive "nLevel: ")
   (setf (go-level *sgf*) level))
+
+(defun go-board-undo (&optional num)
+  (interactive "p")
+  (go-undo *sgf*)
+  (pop *history*)
+  (pop *label-history*)
+  (update-display (current-buffer))
+  (go-board-show-next)
+  (setf *turn* (other-color *turn*)))
 
 (defun go-board-next (&optional branch count)
   (interactive "p")
@@ -430,9 +432,12 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
              (cons move (go-labels *sgf*)))
             (if (equal (cdr move) :pass)
                 (goto-char (point-min))
-              (goto-char (point-of-pos (cddr move)))))))))
+              (goto-char (point-of-pos (cddr move))))
+            (update-display (current-buffer))))))
+  (go-board-show-next))
 
 (defun go-board-show-next ()
+  (interactive)
   (let ((char 97))  ; "a"
     (dolist (move (next-moves *sgf*))
       (if move
@@ -479,11 +484,9 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
     (define-key map (kbd "L") 'go-board-level)
     (define-key map (kbd "P") 'go-board-pass)
     (define-key map (kbd "Q") 'go-board-quit)
-    ;(define-key map (kbd "<right>") 'go-board-next)
-    ;(define-key map (kbd "<left>")  'go-board-undo)
 
     (define-key map (kbd "SPC") 'go-board-undo)
-    (define-key map (kbd "a") (kbd "C-u 0 M-x go-board-next"))
+    (define-key map (kbd "a") 'go-board-next)  ; (kbd "C-u 0 M-x go-board-next") suppresses (message "...")
     (define-key map (kbd "b") (kbd "C-u 1 M-x go-board-next"))
     (define-key map (kbd "c") (kbd "C-u 2 M-x go-board-next"))
     (define-key map (kbd "d") (kbd "C-u 3 M-x go-board-next"))
