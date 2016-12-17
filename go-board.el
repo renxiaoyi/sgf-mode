@@ -286,6 +286,7 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
 
 (defun update-display (buffer)
   (with-current-buffer buffer
+    (visual-line-mode)
     (let ((point (point)))
       (delete-region (point-min) (point-max))
       (insert "\n"
