@@ -109,7 +109,6 @@ Example:
 
 (defmethod next ((sgf sgf) branch)
   "Updates sgf.index to point to the next move."
-  "TODO: fix out of bound problem."
   (incf (car (last (index sgf))))  ; increments the last element
   (if (variation-p (current sgf))
       (progn
@@ -155,8 +154,8 @@ Example:
    ((aget (root sgf) :EV) (setf (cdr (assoc :EV (root sgf))) name))
    (t                     (push (cons :GN name) (root sgf)))))
 
-(defmethod go-move ((sgf sgf) &optional branch)
-  (next sgf (or branch 0))
+(defmethod go-move ((sgf sgf) branch)
+  (next sgf branch)
   (let ((turn (current sgf)))
     (if turn
         (or (assoc :B turn) (assoc :W turn))

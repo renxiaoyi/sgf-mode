@@ -363,7 +363,7 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
                                   (mapcar #'number-to-string
                                           (range 1 *size*))))))))
          (move (cons *turn* (cons :pos pos))))
-    (setf (go-move *sgf*) move)
+    (setf (go-move *sgf* 0) move)  ; todo: (go-move *sgf* branch)
     (setf *turn* (other-color *turn*))
     (apply-turn-to-board (list move))
     (update-display (current-buffer))))
@@ -437,6 +437,15 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
             (update-display (current-buffer))))))
   (go-board-show-next))
 
+(defun go-board-next-0 ()
+  "Binded to (kbd \"a\") to move one step further in the first branch. Note:
+- (define-key map (kbd \"a\") (kbd \"C-u 0 M-x go-board-next\")) suppresses (message ...) in go-board-next.
+- (define-key map (kbd \"a\") 'go-board-next) translates nil to 1 in (interactive \"p\") mode. See
+https://www.gnu.org/software/emacs/manual/html_node/elisp/Prefix-Command-Arguments.html#Prefix-Command-Arguments
+"
+  (interactive)
+  (go-board-next 0))
+
 (defun go-board-show-next ()
   (interactive)
   (let ((char 97))  ; "a"
@@ -487,10 +496,20 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
     (define-key map (kbd "Q") 'go-board-quit)
 
     (define-key map (kbd "SPC") 'go-board-undo)
-    (define-key map (kbd "a") 'go-board-next)  ; (kbd "C-u 0 M-x go-board-next") suppresses (message "...")
+    (define-key map (kbd "a") 'go-board-next-0)
     (define-key map (kbd "b") (kbd "C-u 1 M-x go-board-next"))
     (define-key map (kbd "c") (kbd "C-u 2 M-x go-board-next"))
     (define-key map (kbd "d") (kbd "C-u 3 M-x go-board-next"))
+    (define-key map (kbd "e") (kbd "C-u 4 M-x go-board-next"))
+    (define-key map (kbd "f") (kbd "C-u 5 M-x go-board-next"))
+    (define-key map (kbd "g") (kbd "C-u 6 M-x go-board-next"))
+    (define-key map (kbd "h") (kbd "C-u 7 M-x go-board-next"))
+    (define-key map (kbd "i") (kbd "C-u 8 M-x go-board-next"))
+    (define-key map (kbd "j") (kbd "C-u 9 M-x go-board-next"))
+    (define-key map (kbd "k") (kbd "C-u 10 M-x go-board-next"))
+    (define-key map (kbd "l") (kbd "C-u 11 M-x go-board-next"))
+    (define-key map (kbd "m") (kbd "C-u 12 M-x go-board-next"))
+    (define-key map (kbd "n") (kbd "C-u 13 M-x go-board-next"))
     map)
   "Keymap for `go-board-mode'.")
 
