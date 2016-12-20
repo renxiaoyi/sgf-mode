@@ -91,7 +91,7 @@
         (trans (make-vector (length board) nil)))
     (dotimes (row size trans)
       (dotimes (col size)
-        (setf (aref trans (pos-to-index (cons row col) size))
+        (setf (aref trans (pos-to-index (cons (- size 1 row) col) size))
               (aref board (pos-to-index (cons col row) size)))))))
 
 (defun ear-muffs (str) (concat "*" str "*"))

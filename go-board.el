@@ -64,11 +64,14 @@
   (if (equal color :B) :W :B))
 
 (defun point-of-pos (pos)
-  (catch 'found-pos
-    (dotimes (p (1- (point-max)) (error "point-of-pos: pos %S not found" pos))
-      (let ((pos-at-point (get-text-property (1+ p) :pos)))
-        (when (and pos-at-point (tree-equal pos pos-at-point))
-          (throw 'found-pos (1+ p)))))))
+  ;; Need a transpose because emacs :pos property is different from sgf :pos (link below)
+  ;; http://www.red-bean.com/sgf/go.html
+  (let ((trans-pos (cons (car pos) (- *size* 1 (cdr pos)))))
+    (catch 'found-pos
+      (dotimes (p (1- (point-max)) (error "point-of-pos: pos %S not found" pos))
+        (let ((pos-at-point (get-text-property (1+ p) :pos)))
+          (when (and pos-at-point (tree-equal trans-pos pos-at-point))
+            (throw 'found-pos (1+ p))))))))
 
 (defun apply-turn-to-board (turn)
   "Updates the board by adding one 'turn', then displays.
@@ -77,8 +80,7 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
   - ((:W :pos 16 . 5) (:LB ((:label . '1') (:pos 16 . 3))))  ; two moves"
   (cl-flet ((bset (val data)  ; sets board point at :pos
                   (let ((data (list data)))
-                    (setf (aref board (pos-to-index (aget data :pos)
-                                                    (board-size board)))
+                    (setf (aref board (pos-to-index (aget data :pos) *size*))
                           val)))
             (lcol (data)  ; collects label at :pos
                   (push (cons (aget data :label)
@@ -226,6 +228,7 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
     (concat label " " (substring row-body 0 (1- (length row-body))) label)))
 
 (defun board-body-to-string (board)
+  ;; Needs a transpose: sgf :pos -> 'board' array index -> emacs :pos
   (let ((board (transpose-array board)))
     (mapconcat (lambda (m) (board-row-to-string board m))
                (reverse (range (board-size board))) "\n")))
