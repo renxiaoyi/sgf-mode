@@ -301,7 +301,7 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
         (when comment
           (insert (make-string (+ 6 (* 2 *size*)) ?=)
                   "\n\n"
-                  comment)))
+                  (decode-coding-string comment 'utf-8))))
       (go-board-paint)
       (goto-char point))
     (go-board-add-label (car *label-history*)))
@@ -316,7 +316,7 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
     (go-board-mode)
     (let ((name (go-name sgf)))
       (when name
-        (rename-buffer (ear-muffs name) 'unique)))
+        (rename-buffer (ear-muffs (decode-coding-string name 'utf-8)) 'unique)))
     (set (make-local-variable '*sgf*) sgf)
     (set (make-local-variable '*turn*) :B)
     (set (make-local-variable '*black*) '(:name "black" :prisoners 0))
