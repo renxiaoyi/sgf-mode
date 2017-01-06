@@ -453,17 +453,17 @@ https://www.gnu.org/software/emacs/manual/html_node/elisp/Prefix-Command-Argumen
   (interactive)
   (let ((char 97))  ; "a"
     (dolist (move (next-moves *sgf*))
-      (if move
-          (if (equal (cdr move) :pass)
-              (progn
-                (message "%s to pass" (char-to-string char))
-                (incf char))
-            (go-board-mark-point
-             (point-of-pos (cddr move))
-             (go-board-label
-              (ecase (car move) (:B 'black) (:W 'white))
-              (char-to-string char)))
-            (incf char))))))
+      (case (move-type move)
+        (:pass
+         (message "%s to pass" (char-to-string char))
+         (incf char))
+        (:move
+         (go-board-mark-point
+          (point-of-pos (cddr move))
+          (go-board-label
+           (ecase (car move) (:B 'black) (:W 'white))
+           (char-to-string char)))
+         (incf char))))))
 
 (defun go-board-add-label (labels)
   (dolist (label labels)  ; label is a list (text . point)
