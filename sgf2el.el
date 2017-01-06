@@ -125,6 +125,7 @@
   (interactive "f")
   (with-temp-buffer
     (insert-file-contents-literally file)
+    (recode-buffer-to-utf-8)
     (sgf2el-buffer-to-el)))
 
 
@@ -178,6 +179,14 @@
                                (regexp-quote (car pair)) (cdr pair) comment))))
             comments)))
 (add-to-list 'sgf2el-special-properties (cons :C #'process-comment))
+
+(defun recode-buffer-to-utf-8 ()
+  (let ((buffer-read-only nil)
+        (text (buffer-substring (point-min) (point-max))))
+    (delete-region (point-min) (point-max))
+    (insert (decode-coding-string
+             (string-make-unibyte text)
+             (detect-coding-string text t)))))
 
 (provide 'sgf2el)
 ;;; sgf2el.el ends here
