@@ -468,9 +468,12 @@ https://www.gnu.org/software/emacs/manual/html_node/elisp/Prefix-Command-Argumen
 (defun go-board-add-label (labels)
   (dolist (label labels)  ; label is a list (text . point)
     (if label
-        (go-board-mark-point
-         (cdr label)
-         (go-board-label 'red (car label))))))
+        (let* ((text (car label)) (len (length text)))
+          (if (> len 2)
+              (setf text (substring text -2 len)))
+          (go-board-mark-point
+           (cdr label)
+           (go-board-label 'red text))))))
 
 (defun go-board-mouse-move (ev)
   (interactive "e")
