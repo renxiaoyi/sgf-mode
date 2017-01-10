@@ -26,10 +26,10 @@
 
 (defvar *history* nil "Holds the move history.")
 (defvar *label-history*  nil "Holds the label history.")
+(defvar *black-prisoner-history* nil "Holds the prioner history for black.")
+(defvar *white-prisoner-history* nil "Holds the prioner history for white.")
 (defvar *size* nil "Holds the board size.")
 (defvar *turn* nil "Holds the color of the current turn.")
-(defvar *black* nil "Plist of info on black player.")
-(defvar *white* nil "Plist of info on white player.")
 (defvar *sgf* nil "The sgf object representing the board.")
 (defvar *sgf-file* nil "Path to the current sgf file.")
 
@@ -44,15 +44,6 @@
 (defun make-board (size) (make-vector (* size size) nil))
 
 (defun board-size (board) (round (sqrt (length board))))
-
-(defun go-player-get (color property)
-  (plist-get (case color (:W *white*) (:B *black*)) property))
-
-(defun go-player-set (color property value)
-  (let ((player (case color (:W *white*) (:B *black*))))
-    (plist-put player property value)))
-
-(defsetf go-player-get go-player-set)
 
 (defun move-type (move)
   (cond
@@ -138,7 +129,9 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
     (dotimes (n (length board) board)
       (when (and (equal (aref board n) color) (not (alive-p board n)))
         (push n cull)))
-    (incf (go-player-get (other-color color) :prisoners) (length cull))
+    (case color
+      (:B (push (length cull) *black-prisoner-history*))
+      (:W (push (length cull) *white-prisoner-history*)))
     (dolist (n cull cull) (setf (aref board n) nil))))
 
 (defun board-to-pieces (board)
@@ -282,10 +275,11 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
 
 (defun player-to-string (color)
   (format "%10s: %3d"
-          (let ((name (go-player-get color :name)))
+          (let ((name (case color (:W "white") (:B "black"))))
             (put-text-property 0 (length name) :turn (equal *turn* color) name)
             name)
-          (go-player-get color :prisoners)))
+          (let ((history (case color (:W *white-prisoner-history*) (:B *black-prisoner-history*))))
+            (apply '+ history))))
 
 (defun update-display (buffer)
   (with-current-buffer buffer
@@ -319,16 +313,14 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
         (rename-buffer (ear-muffs (decode-coding-string name 'utf-8)) 'unique)))
     (set (make-local-variable '*sgf*) sgf)
     (set (make-local-variable '*turn*) :B)
-    (set (make-local-variable '*black*) '(:name "black" :prisoners 0))
-    (set (make-local-variable '*white*) '(:name "white" :prisoners 0))
     (set (make-local-variable '*size*) (go-size sgf))
     (set (make-local-variable '*go-board-overlays*) nil)
     (set (make-local-variable '*history*)
          (list (board-to-pieces (make-board *size*)))))
     (set (make-local-variable '*label-history*) nil)
+    (set (make-local-variable '*black-prisoner-history*) nil)
+    (set (make-local-variable '*white-prisoner-history*) nil)
   (pop-to-buffer buffer)
-  (plist-put *black* :prisoners 0)
-  (plist-put *white* :prisoners 0)
   (setq truncate-lines t)
   (update-display buffer)
   (go-board-show-next))
@@ -420,6 +412,8 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
   (go-undo *sgf*)
   (pop *history*)
   (pop *label-history*)
+  (pop *black-prisoner-history*)
+  (pop *white-prisoner-history*)
   (update-display (current-buffer))
   (go-board-show-next)
   (setf *turn* (other-color *turn*)))
