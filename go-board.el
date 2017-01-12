@@ -32,6 +32,7 @@
 (defvar *turn* nil "Holds the color of the current turn.")
 (defvar *sgf* nil "The sgf object representing the board.")
 (defvar *sgf-file* nil "Path to the current sgf file.")
+(defvar *guess-move-mode* nil "Non-nil means to enable guess-move mode.")
 
 (defvar black-piece "X")
 (defvar white-piece "O")
@@ -78,7 +79,6 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
                               (point-of-pos (aget data :pos)))
                         labels)))
     (let ((board (pieces-to-board (car *history*) *size*)) (labels))
-      (clear-labels board)
       (dolist (move turn)
         (case (move-type move)
           (:move
@@ -91,12 +91,6 @@ The input 'turn' is actually one sgf node, which may contain multiple elements (
           (:pass (message "pass"))))
         (push (board-to-pieces board) *history*)
         (push labels *label-history*))))
-
-(defun clear-labels (board)
-  (dotimes (point (length board) board)
-    (when (aref board point)
-      (unless (member (aref board point) '(:B :W))
-        (setf (aref board point) nil)))))
 
 (defun neighbors (board piece)
   (let ((size (board-size board))
@@ -320,6 +314,7 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
     (set (make-local-variable '*label-history*) nil)
     (set (make-local-variable '*black-prisoner-history*) nil)
     (set (make-local-variable '*white-prisoner-history*) nil)
+    (set (make-local-variable '*guess-move-mode*) nil)
   (pop-to-buffer buffer)
   (setq truncate-lines t)
   (update-display buffer)
@@ -327,6 +322,14 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
 
 
 ;;; User input
+(defun go-toggle-guess-move-mode ()
+  "Toggles guess-move mode when viewing sgf."
+  (interactive)
+  (with-current-buffer (current-buffer)
+    (if *guess-move-mode*
+        (setf *guess-move-mode* nil)
+      (setf *guess-move-mode* t))))
+
 (defvar go-board-actions '(move resign undo comment)
   "List of actions which may be taken on an GO board.")
 
@@ -420,6 +423,7 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
 
 (defun go-board-next (&optional branch count)
   (interactive "p")
+  (if *guess-move-mode* (setf branch 0))
   (let (move)
     (dotimes (n (or count 1) move)
       (setf move (go-move *sgf* (or branch 0)))
@@ -443,10 +447,37 @@ https://www.gnu.org/software/emacs/manual/html_node/elisp/Prefix-Command-Argumen
   (interactive)
   (go-board-next 0))
 
+(defun neighbor-move (move dx dy)
+  (let ((color (car move))
+        (x (+ dx (caddr move)))
+        (y (+ dy (cdddr move)))
+        (board (pieces-to-board (car *history*) *size*)))
+    (cond
+     ((or (< x 0) (< y 0) (> x 18) (> y 18)) nil)
+     ((not (equal nil (aref board (pos-to-index (cons x y) *size*)))) nil)
+     (t (cons color (cons :pos (cons x y)))))))
+
+(defun random-moves (move)
+  "Generates <= 9 moves in a 3x3 square, including the correct move (i.e. the input move).
+This is used in guess-move mode.
+A typical move may look like (:W :pos 17 . 3).
+"
+  (let ((ret) (rx (- (random 3) 1)) (ry (- (random 3) 1)))
+    (if (eq :move (move-type move))
+        (dolist (dy '(1 0 -1))
+          (dolist (dx '(1 0 -1))
+            (let ((mv (neighbor-move move (+ dx rx) (+ dy ry))))
+              (if mv (push mv ret))))))
+    ret))
+
 (defun go-board-show-next ()
   (interactive)
-  (let ((char 97))  ; "a"
-    (dolist (move (next-moves *sgf*))
+  (let ((char 97)  ; "a"
+        (candidates))  ; next move candidates
+    (if *guess-move-mode*
+        (setf candidates (random-moves (car (next-moves *sgf*))))
+      (setf candidates (next-moves *sgf*)))
+    (dolist (move candidates)
       (case (move-type move)
         (:pass
          (message "%s to pass" (char-to-string char))
