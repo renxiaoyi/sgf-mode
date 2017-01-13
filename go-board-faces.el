@@ -76,6 +76,9 @@
 
 
 ;;; Image utility functions
+(defun sym-cat (&rest syms)
+  (intern (mapconcat #'symbol-name (delq nil syms) "-")))
+
 (defun go-board-svg-trans (list)
   (if (and (listp list) (listp (car list)))
       (concat (format "<%s%s" (caar list) (if (cdar list) " " ""))

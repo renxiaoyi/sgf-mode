@@ -20,12 +20,16 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-;; Commentary:
-
-;; This file implements an `go-trans' interface into an SGF file.
-
 ;; Code:
 (require 'eieio)
+
+(defun rcons (x lst)
+  (append lst (list x)))
+
+(defmacro rpush (x place)
+  "Insert X at the back of the list stored in PLACE."
+  (if (symbolp place) (list 'setq place (list 'rcons x place))
+    (list 'callf2 'rcons x place)))
 
 (defun sgf-ref (sgf index)
   "Returns the move in sgf pointed by index.
@@ -36,19 +40,12 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
       (setq index (cdr index)))
     part))
 
-(defun set-sgf-ref (sgf index new)
-  (eval `(setf ,(reduce (lambda (acc el) (list 'nth el acc))
-                        index :initial-value 'sgf)
-               ',new)))
+;; (defun set-sgf-ref (sgf index new)
+;;   (eval `(setf ,(reduce (lambda (acc el) (list 'nth el acc))
+;;                         index :initial-value 'sgf)
+;;                ',new)))
 
-(defsetf sgf-ref set-sgf-ref)
-
-
-;;; Class
-(defclass sgf nil
-  ((self  :initarg :self  :accessor self  :initform nil)
-   (index :initarg :index :accessor index :initform (list 0)))
-  "Class for the SGF back end.")
+;; (defsetf sgf-ref set-sgf-ref)
 
 (defun sgf-from-file (file)
   (interactive "f")
@@ -61,7 +58,14 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
     (error "aborted"))
   (with-temp-file file
     (delete-region (point-min) (point-max))
-    (insert (pp (self sgf)))))
+    (insert (pp (self sgf)))))  ; todo: implement el2sgf
+
+
+;;; Class
+(defclass sgf nil
+  ((self  :initarg :self  :accessor self  :initform nil)
+   (index :initarg :index :accessor index :initform (list 0)))
+  "Class for the SGF back end.")
 
 (defmethod current ((sgf sgf))
   "Finds the current move."
@@ -138,12 +142,6 @@ Example:
    ((aget (root sgf) :SZ) (setf (cdr (assoc :SZ (root sgf))) size))
    (t                     (push (cons :S size) (root sgf)))))
 
-(defmethod go-level ((sgf sgf))
-  (signal 'unsupported-back-end-command (list sgf :go-level)))
-
-(defmethod set-go-level ((sgf sgf) level)
-  (signal 'unsupported-back-end-command (list sgf :set-go-level level)))
-
 (defmethod go-name ((sgf sgf))
   (or (aget (root sgf) :GN)
       (aget (root sgf) :EV)))
@@ -191,40 +189,9 @@ Example:
       (setf (cdr (assoc :C (current sgf))) comment)
     (push (cons :C comment) (current sgf))))
 
-(defmethod go-alt ((sgf sgf))
-  (error "sgf: go-alt not yet supported"))
-
-(defmethod set-go-alt ((sgf sgf) alt)
-  (error "sgf: set-go-alt not yet supported"))
-
-(defmethod go-color ((sgf sgf))
-  (signal 'unsupported-back-end-command (list sgf :move)))
-
-(defmethod set-go-color ((sgf sgf) color)
-  (signal 'unsupported-back-end-command (list sgf :set-color color)))
-
 ;; non setf'able generic functions
 (defmethod go-undo ((sgf sgf))
   (prev sgf))
-
-(defmethod go-pass ((sgf sgf))
-  (signal 'unsupported-back-end-command (list sgf :pass)))
-
-(defmethod go-resign ((sgf sgf))
-  (signal 'unsupported-back-end-command (list sgf :resign)))
-
-(defmethod go-quit ((sgf sgf))
-  (when (y-or-n-p "Save game to file: ")
-    (sgf-to-file sgf (read-file-name "Save game to: "))))
-
-(defmethod go-score ((sgf sgf))
-  (signal 'unsupported-back-end-command (list sgf :score)))
-
-(defmethod go-territory ((sgf sgf))
-  (signal 'unsupported-back-end-command (list sgf :territory)))
-
-(defmethod go-dead ((sgf sgf))
-  (signal 'unsupported-back-end-command (list sgf :dead)))
 
 (provide 'sgf)
 ;;; sgf.el ends here

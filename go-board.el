@@ -21,7 +21,7 @@
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
-(require 'go-util)
+(require 'assoc)
 (require 'go-board-faces)
 
 (defvar *history* nil "Holds the move history.")
@@ -40,6 +40,38 @@
 (defvar go-board-use-images t)
 (defvar *go-board-overlays* nil
   "List of overlays carrying GO board painting information.")
+
+(defun range (a &optional b)
+  (block nil
+    (let (tmp)
+      (unless b
+        (cond ((> a 0) (decf a))
+              ((= a 0) (return nil))
+              ((> 0 a) (incf a)))
+        (setq b a a 0))
+      (if (> a b) (setq tmp a a b b tmp))
+      (let ((res (number-sequence a b)))
+        (if tmp (nreverse res) res)))))
+
+(defun pos-to-index (pos size)
+  (+ (car pos) (* (cdr pos) size)))
+
+(defun transpose-array (board)
+  (let ((size (round (sqrt (length board))))
+        (trans (make-vector (length board) nil)))
+    (dotimes (row size trans)
+      (dotimes (col size)
+        (setf (aref trans (pos-to-index (cons (- size 1 row) col) size))
+              (aref board (pos-to-index (cons col row) size)))))))
+
+(defun ear-muffs (str) (concat "*" str "*"))
+
+(defun un-ear-muffs (str)
+  (let ((pen-ult (1- (length str))))
+    (if (and (= ?\* (aref str 0))
+             (= ?\* (aref str pen-ult)))
+        (substring str 1 pen-ult)
+      str)))
 
 ;;; Board manipulation functions
 (defun make-board (size) (make-vector (* size size) nil))
@@ -330,85 +362,13 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
         (setf *guess-move-mode* nil)
       (setf *guess-move-mode* t))))
 
-(defvar go-board-actions '(move resign undo comment)
-  "List of actions which may be taken on an GO board.")
-
-(defun go-board-act ()
-  "Send a command to the current GO board."
-  (interactive)
-  (let ((command (go-completing-read
-                  "Action: " (mapcar #'symbol-name go-board-actions))))
-    (case (intern command)
-      (move    (message "make a move"))
-      (resign  (message "game over"))
-      (undo    (message "loser"))
-      (comment (message "what?")))))
-
-(defun go-board-move (&optional pos)
-  (interactive)
-  (let* ((color (case *turn* (:B "black") (:W "white")))
-         (pos (or pos (cons (char-to-num
-                             (aref (downcase
-                                    (go-completing-read
-                                     (format "[%s] X pos: " color)
-                                     (mapcar #'string
-                                             (mapcar #'gtp-num-to-char
-                                                     (range 1 *size*)))))
-                                   0))
-                            (1- (string-to-number
-                                 (go-completing-read
-                                  (format "[%s] Y pos: " color)
-                                  (mapcar #'number-to-string
-                                          (range 1 *size*))))))))
-         (move (cons *turn* (cons :pos pos))))
-    (setf (go-move *sgf* 0) move)  ; todo: (go-move *sgf* branch)
-    (setf *turn* (other-color *turn*))
-    (apply-turn-to-board (list move))
-    (update-display (current-buffer))))
-
 (defun go-board-refresh ()
   (interactive)
   (update-display (current-buffer))
   (go-board-show-next))
 
-(defun go-board-resign ()
-  (interactive)
-  (go-resign *sgf*))
-
 (defun go-board-mark-point (point mark)
   (mapc (lambda (ov) (go-board-mark ov mark)) (overlays-at point)))
-
-(defun go-board-pass ()
-  (interactive)
-  (go-pass *sgf*)
-  (save-window-excursion
-    (setf *turn* (other-color *turn*))
-    (when (equalp :pass (go-board-next))
-      ;; mark open points
-      (mapc (lambda (move)
-              (go-board-mark-point (point-of-pos (cddr move))
-                                   (go-board-cross (ecase (car move)
-                                                     (:B 'black)
-                                                     (:W 'white)))))
-            (go-territory *sgf*))
-      ;; mark dead stones
-      (mapc (lambda (move)
-              (let* ((point (point-of-pos (cddr move)))
-                     (color (car (get-text-property point :type))))
-                (go-board-mark-point point
-                                     (go-board-cross (ecase color
-                                                       (:black 'white)
-                                                       (:white 'black))))))
-            (go-dead *sgf*))
-      (message "final score: %s" (go-score *sgf*)))))
-
-(defun go-board-comment (&optional comment)
-  (interactive "MComment: ")
-  (setf (go-comment *sgf*) comment))
-
-(defun go-board-level (&optional level)
-  (interactive "nLevel: ")
-  (setf (go-level *sgf*) level))
 
 (defun go-board-undo (&optional num)
   (interactive "p")
@@ -500,30 +460,17 @@ A typical move may look like (:W :pos 17 . 3).
            (cdr label)
            (go-board-label 'red text))))))
 
-(defun go-board-mouse-move (ev)
-  (interactive "e")
-  (go-board-move (get-text-property (posn-point (event-start ev)) :pos)))
-
 (defun go-board-quit ()
   (interactive)
-  (when (y-or-n-p "quit: ")
+  (when (y-or-n-p "Quit: ")
     (kill-buffer (current-buffer))))
-
-(defun go-board-safe-quit ()
-  (ignore-errors (go-quit *sgf*))
-  t)
 
 
 ;;; Display mode
 (defvar go-board-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "<mouse-1>") 'go-board-mouse-move)
-    (define-key map (kbd "RET") 'go-board-move)
-    (define-key map (kbd "R") 'go-board-refresh)
-    (define-key map (kbd "S") 'go-board-resign)
-    (define-key map (kbd "C") 'go-board-comment)
-    (define-key map (kbd "L") 'go-board-level)
-    (define-key map (kbd "P") 'go-board-pass)
+    (define-key map (kbd "r") 'go-board-refresh)
+    (define-key map (kbd "q") 'bury-buffer)
     (define-key map (kbd "Q") 'go-board-quit)
 
     (define-key map (kbd "SPC") 'go-board-undo)
@@ -546,8 +493,7 @@ A typical move may look like (:W :pos 17 . 3).
 
 (define-derived-mode go-board-mode nil "GO"
   "Major mode for viewing a GO board."
-  (set (make-local-variable 'kill-buffer-query-functions)
-       (add-to-list 'kill-buffer-query-functions 'go-board-safe-quit)))
+)
 
 (provide 'go-board)
 ;;; go-board.el ends here

@@ -21,8 +21,6 @@
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
-(require 'go-util)
-
 (defvar prop-re
   "\\([[:alpha:]]+\\)\\(\\(\\[\\]\\|[[:space:]]*\\[[^\000]*?[^\\]\\]\\)+\\)")
 
@@ -31,6 +29,36 @@
 
 (defvar sgf2el-special-properties nil
   "A-list of properties and functions to specially convert their values.")
+
+(defun char-to-num (char)
+  (cl-flet ((err () (error "gtp: invalid char %s" char)))
+    (cond
+     ((< char ?A)  (err))
+     ((< char ?I)  (- char ?A))
+     ((<= char ?T) (1- (- char ?A)))
+     ((< char ?a)  (err))
+     ((< char ?i)  (- char ?a))
+     ((<= char ?t) (1- (- char ?a)))
+     (t (err)))))
+
+(defun num-to-char (num)
+  (cl-flet ((err () (error "gtp: invalid num %s" num)))
+    (cond
+     ((< num 1) (err))
+     ((< num 9) (+ ?A (1- num)))
+     (t         (+ ?A num)))))
+
+(defun go-number-p (string)
+  "If STRING represents a number return its value."
+  (if (and (string-match "[0-9]+" string)
+	   (string-match "^-?[0-9]*\\.?[0-9]*$" string)
+           (= (length (substring string (match-beginning 0)
+				 (match-end 0)))
+	      (length string)))
+      (string-to-number string)))
+
+(defun go-clean-text-properties (string)
+  (set-text-properties 0 (length string) nil string) string)
 
 (defun make-keyword (string)
   (intern (concat ":" (upcase string))))
