@@ -1,11 +1,15 @@
 ;;; sgf.el --- SGF GO back end
 
-;; Copyright (C) 2012  Free Software Foundation, Inc.
+;; Copyright (C) 2012-2017 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte <schulte.eric@gmail.com>
 ;; Created: 2012-05-15
 ;; Version: 0.1
 ;; Keywords: game go sgf
+;; Package-Requires: ((emacs "24"))
+;; URL: http://eschulte.github.io/el-go/
+
+;; Last modified by Xiaoyi Ren in Jan. 2017
 
 ;; This software is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -40,12 +44,12 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
       (setq index (cdr index)))
     part))
 
-;; (defun set-sgf-ref (sgf index new)
-;;   (eval `(setf ,(reduce (lambda (acc el) (list 'nth el acc))
-;;                         index :initial-value 'sgf)
-;;                ',new)))
+(defun set-sgf-ref (sgf index new)
+  (eval `(setf ,(reduce (lambda (acc el) (list 'nth el acc))
+                        index :initial-value 'sgf)
+               ',new)))
 
-;; (defsetf sgf-ref set-sgf-ref)
+(defsetf sgf-ref set-sgf-ref)
 
 (defun sgf-from-file (file)
   (interactive "f")
@@ -59,6 +63,17 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
   (with-temp-file file
     (delete-region (point-min) (point-max))
     (insert (pp (self sgf)))))  ; todo: implement el2sgf
+
+(defun variation-p (node)
+  "Returns t if node is a variation line, otherwise nil.
+Example:
+  (((:B :pos 13 . 3))((:W :pos 17 . 3))((:B :pos 16 . 2))) => t
+  ((:B :pos 15 . 3)) => nil
+  ((:B :pos 16 . 3) (:LB ((:label . \"1\") (:pos 16 . 3))) (:C . \"Lee Sedol played Black.\")) => nil"
+  (cond ((not (listp node)) nil)
+        ((not (listp (car node))) nil)
+        ((not (listp (caar node))) nil)
+        (t t)))  ; is move-type necessary?
 
 
 ;;; Class
@@ -99,17 +114,6 @@ Example: (sgf-ref '(0 1 2 (a3 a4) (b3 b4 b5)) '(3 1)) => a4."
           (rpush (caar node) ret)
           (incf (car (last index))))
         ret))))
-
-(defun variation-p (node)
-  "Returns t if node is a variation line, otherwise nil.
-Example:
-  (((:B :pos 13 . 3))((:W :pos 17 . 3))((:B :pos 16 . 2))) => t
-  ((:B :pos 15 . 3)) => nil
-  ((:B :pos 16 . 3) (:LB ((:label . \"1\") (:pos 16 . 3))) (:C . \"Lee Sedol played Black.\")) => nil"
-  (cond ((not (listp node)) nil)
-        ((not (listp (car node))) nil)
-        ((not (listp (caar node))) nil)
-        (t t)))  ; is move-type necessary?
 
 (defmethod next ((sgf sgf) branch)
   "Updates sgf.index to point to the next move."

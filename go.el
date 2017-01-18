@@ -1,14 +1,15 @@
 ;;; go.el --- Play GO, translate and transfer between GO back ends
 
-;; Copyright (C) 2012  Free Software Foundation, Inc.
+;; Copyright (C) 2012-2017 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte <schulte.eric@gmail.com>
-;; Maintainer: Eric Schulte <schulte.eric@gmail.com>
-;; Version: 0.0.1
-;; Package-Requires: ((emacs "24"))
 ;; Created: 2012-05-15
+;; Version: 0.1
 ;; Keywords: game go sgf
+;; Package-Requires: ((emacs "24"))
 ;; URL: http://eschulte.github.io/el-go/
+
+;; Last modified by Xiaoyi Ren in Jan. 2017
 
 ;; This software is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by

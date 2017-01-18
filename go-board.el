@@ -1,11 +1,15 @@
 ;;; go-board.el --- Smart Game Format GO board visualization
 
-;; Copyright (C) 2012-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2017 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte <schulte.eric@gmail.com>
 ;; Created: 2012-05-15
 ;; Version: 0.1
 ;; Keywords: game go sgf
+;; Package-Requires: ((emacs "24"))
+;; URL: http://eschulte.github.io/el-go/
+
+;; Last modified by Xiaoyi Ren in Jan. 2017
 
 ;; This software is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -474,6 +478,7 @@ A typical move may look like (:W :pos 17 . 3).
     (define-key map (kbd "Q") 'go-board-quit)
 
     (define-key map (kbd "SPC") 'go-board-undo)
+    (define-key map (kbd "RET") 'go-board-next-0)
     (define-key map (kbd "a") 'go-board-next-0)
     (define-key map (kbd "b") (kbd "C-u 1 M-x go-board-next"))
     (define-key map (kbd "c") (kbd "C-u 2 M-x go-board-next"))
