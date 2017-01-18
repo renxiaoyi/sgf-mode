@@ -1,4 +1,4 @@
-;;; go-board.el --- Smart Game Format GO board visualization
+;;; go-board-mode.el --- Smart Game Format GO board visualization
 
 ;; Copyright (C) 2012-2017 Free Software Foundation, Inc.
 
@@ -27,6 +27,8 @@
 ;;; Code:
 (require 'assoc)
 (require 'go-board-faces)
+(require 'sgf)
+(require 'sgf2el)
 
 (defvar *history* nil "Holds the move history.")
 (defvar *label-history*  nil "Holds the label history.")
@@ -357,7 +359,26 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
   (go-board-show-next))
 
 
-;;; User input
+;;; User inputs and commands
+(defun go-view-sgf (&optional file)
+  "View an SGF file."
+  (interactive "fSGF file: ")
+  (setq *sgf-file* file)
+  (let ((sgf (make-instance
+              'sgf
+              :self (sgf2el-file-to-el file)
+              :index (copy-list '(0))))) ; uses copy-list to avoid modifying '(0)
+    (go-board sgf)))
+
+(defun go-reload-sgf ()
+  "Reloads the current SGF file."
+  (interactive)
+  (let ((sgf (make-instance
+              'sgf
+              :self (sgf2el-file-to-el *sgf-file*)
+              :index (copy-list '(0)))))
+    (go-board-in-buffer sgf (current-buffer))))
+
 (defun go-toggle-guess-move-mode ()
   "Toggles guess-move mode when viewing sgf."
   (interactive)
@@ -496,9 +517,8 @@ A typical move may look like (:W :pos 17 . 3).
     map)
   "Keymap for `go-board-mode'.")
 
-(define-derived-mode go-board-mode nil "GO"
-  "Major mode for viewing a GO board."
-)
+(define-derived-mode go-board-mode nil "go-board"
+  "Major mode for viewing SGF files.")
 
-(provide 'go-board)
-;;; go-board.el ends here
+(provide 'go-board-mode)
+;;; go-board-mode.el ends here
