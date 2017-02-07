@@ -1,4 +1,4 @@
-;;; sgf.el --- SGF GO back end
+;;; sgf.el --- SGF object in elisp
 
 ;; Copyright (C) 2012-2017 Free Software Foundation, Inc.
 
@@ -9,7 +9,7 @@
 ;; Package-Requires: ((emacs "24"))
 ;; URL: http://eschulte.github.io/el-go/
 
-;; Last modified by Xiaoyi Ren in Jan. 2017
+;; Last modified by Xiaoyi Ren in Feb. 2017
 
 ;; This software is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -92,6 +92,7 @@ Example:
 (defsetf current set-current)
 
 (defmethod root ((sgf sgf))
+  "Finds the 0th (information) node of the sgf."
   (sgf-ref (self sgf) '(0)))
 
 (defun set-root (sgf new)

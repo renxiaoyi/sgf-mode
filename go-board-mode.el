@@ -1,4 +1,24 @@
-;;; go-board-mode.el --- Smart Game Format GO board visualization
+;;; go-board-mode.el --- Smart Game Format (SGF) GO board visualization
+
+;; Usage:
+;;
+;; Add following lines to .emacs:
+;;   (add-to-list 'load-path "/path/to/go-board-mode")
+;;   (require 'go-board-mode)
+;;
+;; Open foo.sgf in go-board-mode:
+;;   M-x go-open-sgf RET [then complete the path to foo.sgf when prompt]
+;;
+;; Or first open (C-x C-f) /path/to/foo.sgf, then
+;;   M-x go-load-sgf RET
+;;
+;; Toggle guess-move mode (inspired by Android APP "Go Dojo"):
+;;   M-x go-toggle-guess-move-mode
+;;
+;; Enter: one move forward.
+;; Space: one move back.
+;; Letter keys "a"-"n": navigate through variation branches.
+;; "q" to bury the buffer, "Q" to kill the buffer, "R" to reload.
 
 ;; Copyright (C) 2012-2017 Free Software Foundation, Inc.
 
@@ -9,7 +29,7 @@
 ;; Package-Requires: ((emacs "24"))
 ;; URL: http://eschulte.github.io/el-go/
 
-;; Last modified by Xiaoyi Ren in Jan. 2017
+;; Last modified by Xiaoyi Ren in Feb. 2017
 
 ;; This software is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -333,10 +353,6 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
     (go-board-add-label (car *label-history*)))
   buffer)
 
-(defun go-board (sgf)
-  (let ((buffer (generate-new-buffer "*GO*")))
-    (go-board-in-buffer sgf buffer)))
-
 (defun go-board-in-buffer (sgf buffer)
   (with-current-buffer buffer
     (go-board-mode)
@@ -360,24 +376,20 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
 
 
 ;;; User inputs and commands
-(defun go-view-sgf (&optional file)
-  "View an SGF file."
+(defun go-open-sgf (&optional file)
+  "Opens an SGF file in go-board-mode in a new buffer."
   (interactive "fSGF file: ")
-  (setq *sgf-file* file)
-  (let ((sgf (make-instance
-              'sgf
-              :self (sgf2el-file-to-el file)
-              :index (copy-list '(0))))) ; uses copy-list to avoid modifying '(0)
-    (go-board sgf)))
+  (let ((buffer (generate-new-buffer "*GO*")))
+    (go-load-sgf file buffer)))
 
-(defun go-reload-sgf ()
-  "Reloads the current SGF file."
+(defun go-load-sgf (&optional file buffer)
   (interactive)
+  (setf *sgf-file* (or file buffer-file-name))
   (let ((sgf (make-instance
               'sgf
               :self (sgf2el-file-to-el *sgf-file*)
-              :index (copy-list '(0)))))
-    (go-board-in-buffer sgf (current-buffer))))
+              :index (copy-list '(0))))) ; uses copy-list to avoid modifying '(0)
+    (go-board-in-buffer sgf (or buffer (current-buffer)))))
 
 (defun go-toggle-guess-move-mode ()
   "Toggles guess-move mode when viewing sgf."
@@ -391,6 +403,10 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
   (interactive)
   (update-display (current-buffer))
   (go-board-show-next))
+
+(defun go-board-reload ()
+  (interactive)
+  (go-load-sgf *sgf-file* (current-buffer)))
 
 (defun go-board-mark-point (point mark)
   (mapc (lambda (ov) (go-board-mark ov mark)) (overlays-at point)))
@@ -495,6 +511,7 @@ A typical move may look like (:W :pos 17 . 3).
 (defvar go-board-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "r") 'go-board-refresh)
+    (define-key map (kbd "R") 'go-board-reload)
     (define-key map (kbd "q") 'bury-buffer)
     (define-key map (kbd "Q") 'go-board-quit)
 
