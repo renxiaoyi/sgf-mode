@@ -6,7 +6,7 @@
 ;;   (add-to-list 'load-path "/path/to/go-board-mode")
 ;;   (require 'go-board-mode)
 ;;
-;; Open foo.sgf in go-board-mode:
+;; Open foo.sgf (e.g. go-board-mode/alphago.sgf) in go-board-mode:
 ;;   M-x go-open-sgf RET [then complete the path to foo.sgf when prompt]
 ;;
 ;; Or first open (C-x C-f) /path/to/foo.sgf, then
