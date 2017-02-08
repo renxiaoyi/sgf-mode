@@ -2,13 +2,13 @@
 
 ;; Copyright (C) 2012-2017 Free Software Foundation, Inc.
 
-;; Author: Eric Schulte <schulte.eric@gmail.com>
+;; Creator: Eric Schulte <schulte.eric@gmail.com>
 ;; Created: 2012-05-15
 ;; Version: 0.1
 ;; Keywords: game go sgf
 ;; Package-Requires: ((emacs "24"))
 ;; URL: http://eschulte.github.io/el-go/
-
+;;
 ;; Last modified by Xiaoyi Ren in Feb. 2017
 
 ;; This software is free software: you can redistribute it and/or modify
