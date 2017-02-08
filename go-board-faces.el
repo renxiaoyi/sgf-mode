@@ -105,7 +105,7 @@
 
 (defun go-board-label (color label)
   (go-board-svg-trans
-   `((text (x . 4.75) (y . 15.75)
+   `((text (x . ,(- 12.75 (* 4.75 (length label)))) (y . 16.25)
            (style . ,(format "font-size:16;font-family:monospace;fill:%s;" color)))
      ,label)))
 
