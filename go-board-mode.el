@@ -422,6 +422,14 @@ Example: pieces ((:W . 111) (:B . 72)) shows there're two stones on the board.
   (go-board-show-next)
   (setf *turn* (other-color *turn*)))
 
+(defun go-board-prev-variation ()
+  (interactive)
+  (go-board-undo)
+  (while (and
+          (not (equal (index *sgf*) '(0)))
+          (not (meet-variation-p *sgf*)))
+    (go-board-undo)))
+
 (defun go-board-next (&optional branch count)
   (interactive "p")
   (if *guess-move-mode* (setf branch 0))
@@ -517,6 +525,7 @@ A typical move may look like (:W :pos 17 . 3).
 
     (define-key map (kbd "SPC") 'go-board-undo)
     (define-key map (kbd "RET") 'go-board-next-0)
+    (define-key map (kbd "DEL") 'go-board-prev-variation)
     (define-key map (kbd "a") 'go-board-next-0)
     (define-key map (kbd "b") (kbd "C-u 1 M-x go-board-next"))
     (define-key map (kbd "c") (kbd "C-u 2 M-x go-board-next"))

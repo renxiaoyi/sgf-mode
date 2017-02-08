@@ -102,6 +102,12 @@ Example:
 
 (defsetf root set-root)
 
+(defmethod meet-variation-p ((sgf sgf))
+  "True if next move has multiple options."
+  (let ((index (copy-list (index sgf))))
+    (incf (car (last index)))
+    (variation-p (sgf-ref (self sgf) index))))
+
 (defmethod next-moves ((sgf sgf))
   "Finds the next move(s) without changing the index."
   (let ((index (copy-list (index sgf))))
@@ -134,7 +140,6 @@ Example:
                 (variation-p (current sgf)))  ; in variation, should go back to root
       (decf (car (last (index sgf)))))))
 
-
 ;;; interface
 (defmethod go-size ((sgf sgf))
   (or (aget (root sgf) :S)
@@ -145,7 +150,7 @@ Example:
   (cond
    ((aget (root sgf)  :S) (setf (cdr (assoc  :S (root sgf))) size))
    ((aget (root sgf) :SZ) (setf (cdr (assoc :SZ (root sgf))) size))
-   (t                     (push (cons :S size) (root sgf)))))
+   (t (push (cons :S size) (root sgf)))))
 
 (defmethod go-name ((sgf sgf))
   (or (aget (root sgf) :GN)
@@ -155,7 +160,7 @@ Example:
   (cond
    ((aget (root sgf) :GN) (setf (cdr (assoc :GN (root sgf))) name))
    ((aget (root sgf) :EV) (setf (cdr (assoc :EV (root sgf))) name))
-   (t                     (push (cons :GN name) (root sgf)))))
+   (t (push (cons :GN name) (root sgf)))))
 
 (defmethod go-move ((sgf sgf) branch)
   (next sgf branch)
