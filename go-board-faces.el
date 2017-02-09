@@ -104,9 +104,11 @@
              ""))
 
 (defun go-board-label (color label)
-  (let ((size 16))
+  (let ((size 20))
+    (if (> (length label) 1)
+        (setf size 14))
     (go-board-svg-trans
-     `((text (x . ,(- 12.75 (* 4.75 (length label)))) (y . 16.25)
+     `((text (x . ,(- 8.75 (* 2.25 (length label)))) (y . 16.25)
              (style . ,(format "font-size:%d;font-family:monospace;fill:%s;" size color)))
        ,label))))
 
