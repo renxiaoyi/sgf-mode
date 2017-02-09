@@ -104,10 +104,11 @@
              ""))
 
 (defun go-board-label (color label)
-  (go-board-svg-trans
-   `((text (x . ,(- 12.75 (* 4.75 (length label)))) (y . 16.25)
-           (style . ,(format "font-size:16;font-family:monospace;fill:%s;" color)))
-     ,label)))
+  (let ((size 16))
+    (go-board-svg-trans
+     `((text (x . ,(- 12.75 (* 4.75 (length label)))) (y . 16.25)
+             (style . ,(format "font-size:%d;font-family:monospace;fill:%s;" size color)))
+       ,label))))
 
 (defun go-board-mark (overlay mark)
   "Write MARK over top of the SVG image in OVERLAY."
