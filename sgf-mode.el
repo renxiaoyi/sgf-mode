@@ -13,11 +13,11 @@
 ;;   M-x sgf-load RET
 ;;
 ;; Toggle guess-move mode (inspired by Android APP "Go Dojo"):
-;;   M-x sgf-toggle-guess-move-mode
+;;   M-x sgf-toggle-guess-move-mode RET
 ;;
 ;; Enter: one move forward.
 ;; Space: one move back.
-;; DELETE: previous variation.
+;; Delete: previous variation.
 ;; Letter keys "a"-"n": navigate through variation branches.
 ;; "q" to bury the buffer, "Q" to kill the buffer, "R" to reload.
 
