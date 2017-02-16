@@ -32,3 +32,7 @@ Toggle guess-move mode (inspired by Android APP "[Go Dojo](https://play.google.c
  * Delete: previous variation.
  * Letter keys "a"-"n": navigate through variation branches.
  * "q" to bury the buffer, "Q" to kill the buffer, "R" to reload.
+
+## Screenshot
+
+![](https://raw.githubusercontent.com/renxiaoyi/sgf-mode/master/sgf-mode-screen-shot.png)
