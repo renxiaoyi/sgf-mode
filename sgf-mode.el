@@ -513,6 +513,7 @@ A typical move may look like (:W :pos 17 . 3).
 (defun go-board-quit ()
   (interactive)
   (when (y-or-n-p "Quit: ")
+    (set-buffer-modified-p nil)
     (kill-buffer (current-buffer))))
 
 
